@@ -254,7 +254,7 @@ onUnmounted(() => {
 .field-list-move,
 .field-list-enter-active,
 .field-list-leave-active {
-  transition: all 0.3s ease;
+  transition: all 0.15s ease-out;
 }
 
 .field-list-enter-from,

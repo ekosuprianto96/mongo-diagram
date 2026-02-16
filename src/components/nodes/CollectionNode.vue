@@ -1,7 +1,7 @@
 <script setup>
-import { ref } from 'vue'
-import { Handle, Position } from '@vue-flow/core'
-import { MoreVertical, Plus, Trash2 } from 'lucide-vue-next'
+import { nextTick, onUnmounted, ref, watch } from 'vue'
+import { useVueFlow } from '@vue-flow/core'
+import { MoreVertical, Plus } from 'lucide-vue-next'
 import { useSchemaStore } from '../../stores/schemaStore'
 import FieldItem from './FieldItem.vue'
 
@@ -9,9 +9,11 @@ const props = defineProps(['data', 'id'])
 const emit = defineEmits(['update-node'])
 
 const store = useSchemaStore()
+const { updateNodeInternals } = useVueFlow()
 const isEditing = ref(false)
 const tempLabel = ref('')
 const titleInput = ref(null)
+let syncRaf = null
 
 const startEditing = () => {
     isEditing.value = true
@@ -41,6 +43,40 @@ const addField = () => {
     })
     store.selectItem(newId, 'field', props.id)
 }
+
+const syncEdgesDuringFieldAnimation = () => {
+  if (syncRaf) {
+    cancelAnimationFrame(syncRaf)
+    syncRaf = null
+  }
+
+  const duration = 180
+  const start = performance.now()
+
+  const tick = () => {
+    updateNodeInternals([props.id])
+    if (performance.now() - start < duration) {
+      syncRaf = requestAnimationFrame(tick)
+    } else {
+      syncRaf = null
+    }
+  }
+
+  syncRaf = requestAnimationFrame(tick)
+}
+
+watch(
+  () => props.data.fields,
+  async () => {
+    await nextTick()
+    syncEdgesDuringFieldAnimation()
+  },
+  { deep: true }
+)
+
+onUnmounted(() => {
+  if (syncRaf) cancelAnimationFrame(syncRaf)
+})
 </script>
 
 <template>
@@ -101,7 +137,7 @@ const addField = () => {
 .field-list-move,
 .field-list-enter-active,
 .field-list-leave-active {
-  transition: all 0.3s ease;
+  transition: all 0.15s ease-out;
 }
 
 .field-list-enter-from,
