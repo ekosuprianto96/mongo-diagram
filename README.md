@@ -5,7 +5,7 @@ You can create collections, add fields (including nested object/array fields), b
 
 ## Screenshot
 
-
+![Mongo Diagram Screenshot](./screenshoot-1.png)
 
 ## Main Features
 
