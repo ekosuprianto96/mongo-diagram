@@ -1,6 +1,7 @@
 <script setup>
 import { computed, ref, watch, onMounted, onUnmounted } from 'vue'
 import { useSchemaStore } from '../stores/schemaStore'
+import { useUiStore } from '../stores/uiStore'
 import { X, Copy } from 'lucide-vue-next'
 
 const props = defineProps({
@@ -17,6 +18,7 @@ const props = defineProps({
 const emit = defineEmits(['close'])
 
 const store = useSchemaStore()
+const ui = useUiStore()
 const code = computed(() => {
     if (props.collectionIds.length > 0) {
         return store.getCollectionsCode(props.collectionIds)
@@ -30,8 +32,13 @@ const editorContainer = ref(null)
 const isLoading = ref(true)
 let editorInstance = null
 
-const copyToClipboard = () => {
-    navigator.clipboard.writeText(code.value)
+const copyToClipboard = async () => {
+    try {
+        await navigator.clipboard.writeText(code.value)
+        ui.showToast('Code copied to clipboard.', 'success')
+    } catch (error) {
+        ui.showToast('Failed to copy code.', 'error')
+    }
 }
 
 const initMonaco = () => {
