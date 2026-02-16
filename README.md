@@ -3,6 +3,10 @@
 Mongo Diagram is a visual app to design MongoDB/Mongoose schemas using **Vue 3 + Vue Flow**.
 You can create collections, add fields (including nested object/array fields), build relationships between fields, and export the result as Mongoose schema code.
 
+## Screenshot
+
+![Mongo Diagram Screenshot](./screenshoot-1.png)
+
 ## Main Features
 
 - Node-based visual editor for MongoDB collections.
