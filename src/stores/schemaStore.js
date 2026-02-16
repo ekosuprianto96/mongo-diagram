@@ -446,7 +446,9 @@ export const useSchemaStore = defineStore('schema', {
         },
         mongooseSchemaCode: (state) => {
             let code = "const mongoose = require('mongoose');\nconst { Schema } = mongoose;\n\n";
-            state.collections.forEach(col => {
+            state.collections
+                .filter((col) => col.databaseId === state.activeDatabaseId)
+                .forEach(col => {
                 const optionsStr = schemaOptionsToCode(buildSchemaOptions(col.data))
 
                 code += `const ${col.data.label}Schema = new Schema({\n`;
