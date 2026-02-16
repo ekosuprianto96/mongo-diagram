@@ -1,5 +1,5 @@
 <script setup>
-import { computed, ref } from 'vue'
+import { computed, onMounted, onUnmounted, ref } from 'vue'
 import { Handle, Position } from '@vue-flow/core'
 import { Plus } from 'lucide-vue-next'
 import { useSchemaStore } from '../../stores/schemaStore'
@@ -39,6 +39,7 @@ const isEditing = ref(false)
 const tempName = ref('')
 const nameInput = ref(null)
 const isDragOver = ref(false)
+const isConnecting = ref(false)
 
 const startEditing = () => {
     isEditing.value = true
@@ -71,6 +72,11 @@ const addChildField = () => {
 
 // Drag & Drop
 const handleDragStart = (e) => {
+    if (isConnecting.value) {
+        e.preventDefault()
+        return
+    }
+
     e.dataTransfer.effectAllowed = 'move'
     e.dataTransfer.setData('application/json', JSON.stringify({
         fieldId: props.field.id,
@@ -107,6 +113,27 @@ const handleDrop = (e) => {
         console.error('Drop error:', err)
     }
 }
+
+const startConnection = () => {
+    isConnecting.value = true
+}
+
+const stopConnection = () => {
+    // Delay reset slightly so browser does not start native drag from same interaction.
+    requestAnimationFrame(() => {
+        isConnecting.value = false
+    })
+}
+
+onMounted(() => {
+    window.addEventListener('mouseup', stopConnection)
+    window.addEventListener('touchend', stopConnection)
+})
+
+onUnmounted(() => {
+    window.removeEventListener('mouseup', stopConnection)
+    window.removeEventListener('touchend', stopConnection)
+})
 </script>
 
 <template>
@@ -119,7 +146,7 @@ const handleDrop = (e) => {
             isDragOver ? 'border-t-emerald-500 bg-[#2a2a2a]/50 scale-[1.02]' : ''
         ]"
         :style="{ paddingLeft }"
-        draggable="true"
+        :draggable="!isConnecting"
         @dragstart="handleDragStart"
         @dragover="handleDragOver"
         @dragleave="handleDragLeave"
@@ -161,6 +188,8 @@ const handleDrop = (e) => {
           type="target"
           :position="Position.Left"
           :id="field.id"
+          @mousedown.stop="startConnection"
+          @touchstart.stop="startConnection"
           class="!w-2 !h-2 !bg-gray-500 !-left-2.5 opacity-0 group-hover/field:opacity-100 transition-opacity"
         />
 
@@ -197,6 +226,8 @@ const handleDrop = (e) => {
           type="source"
           :position="Position.Right"
           :id="field.id"
+          @mousedown.stop="startConnection"
+          @touchstart.stop="startConnection"
           class="!w-2 !h-2 !bg-emerald-500 !-right-2.5 opacity-0 group-hover/field:opacity-100 transition-opacity"
         />
       </div>
