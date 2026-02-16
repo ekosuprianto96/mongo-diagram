@@ -8,12 +8,19 @@ const props = defineProps({
     collectionId: {
         type: String,
         default: null
+    },
+    collectionIds: {
+        type: Array,
+        default: () => []
     }
 })
 const emit = defineEmits(['close'])
 
 const store = useSchemaStore()
 const code = computed(() => {
+    if (props.collectionIds.length > 0) {
+        return store.getCollectionsCode(props.collectionIds)
+    }
     if (props.collectionId) {
         return store.getCollectionCode(props.collectionId)
     }

@@ -1,0 +1,256 @@
+{
+  "version": 1,
+  "exportedAt": "2026-02-16T00:00:00.000Z",
+  "databases": [
+    { "id": "db-commerce", "name": "CommerceDB" },
+    { "id": "db-analytics", "name": "AnalyticsDB" }
+  ],
+  "activeDatabaseId": "db-commerce",
+  "collections": [
+    {
+      "id": "col-roles",
+      "databaseId": "db-commerce",
+      "type": "collection",
+      "position": { "x": 80, "y": 40 },
+      "selected": false,
+      "data": {
+        "label": "Roles",
+        "timestampsEnabled": true,
+        "schemaCollectionName": "roles",
+        "schemaStrictMode": "true",
+        "schemaAutoIndexMode": "true",
+        "fields": [
+          { "id": "f-roles-id", "name": "_id", "type": "ObjectId", "key": true },
+          { "id": "f-roles-code", "name": "code", "type": "String", "required": true, "unique": true, "index": true, "trim": true, "uppercase": true, "minLength": 3, "maxLength": 32 },
+          { "id": "f-roles-name", "name": "name", "type": "String", "required": true, "trim": true, "minLength": 3, "maxLength": 80 },
+          { "id": "f-roles-permissions", "name": "permissions", "type": "Array", "arrayOfType": "String" },
+          { "id": "f-roles-is-system", "name": "is_system", "type": "Boolean", "defaultBooleanMode": "false" }
+        ]
+      }
+    },
+    {
+      "id": "col-users",
+      "databaseId": "db-commerce",
+      "type": "collection",
+      "position": { "x": 420, "y": 20 },
+      "selected": false,
+      "data": {
+        "label": "Users",
+        "timestampsEnabled": true,
+        "schemaCollectionName": "users",
+        "schemaStrictMode": "true",
+        "schemaAutoIndexMode": "true",
+        "schemaOptimisticConcurrencyMode": "true",
+        "fields": [
+          { "id": "f-users-id", "name": "_id", "type": "ObjectId", "key": true },
+          { "id": "f-users-email", "name": "email", "type": "String", "required": true, "unique": true, "index": true, "trim": true, "lowercase": true, "matchPattern": "^[^\\s@]+@[^\\s@]+\\.[^\\s@]+$", "matchFlags": "i" },
+          { "id": "f-users-password", "name": "password_hash", "type": "String", "required": true, "minLength": 20 },
+          { "id": "f-users-role-id", "name": "role_id", "type": "ObjectId", "required": true, "index": true, "ref": "Roles" },
+          { "id": "f-users-status", "name": "status", "type": "String", "required": true, "enumValues": ["ACTIVE", "PENDING", "SUSPENDED"], "defaultString": "PENDING", "index": true },
+          {
+            "id": "f-users-profile",
+            "name": "profile",
+            "type": "Object",
+            "children": [
+              { "id": "f-users-profile-first", "name": "first_name", "type": "String", "trim": true },
+              { "id": "f-users-profile-last", "name": "last_name", "type": "String", "trim": true },
+              { "id": "f-users-profile-phone", "name": "phone", "type": "String", "trim": true },
+              { "id": "f-users-profile-birth", "name": "birth_date", "type": "Date" }
+            ]
+          },
+          {
+            "id": "f-users-addresses",
+            "name": "addresses",
+            "type": "Array",
+            "children": [
+              { "id": "f-users-addr-label", "name": "label", "type": "String", "trim": true },
+              { "id": "f-users-addr-street", "name": "street", "type": "String", "trim": true },
+              { "id": "f-users-addr-city", "name": "city", "type": "String", "trim": true, "index": true },
+              { "id": "f-users-addr-state", "name": "state", "type": "String", "trim": true },
+              { "id": "f-users-addr-postal", "name": "postal_code", "type": "String", "trim": true },
+              { "id": "f-users-addr-country", "name": "country", "type": "String", "trim": true },
+              {
+                "id": "f-users-addr-geo",
+                "name": "geo",
+                "type": "Object",
+                "children": [
+                  { "id": "f-users-addr-lat", "name": "lat", "type": "Number" },
+                  { "id": "f-users-addr-lng", "name": "lng", "type": "Number" }
+                ]
+              },
+              { "id": "f-users-addr-primary", "name": "is_primary", "type": "Boolean", "defaultBooleanMode": "false" }
+            ]
+          },
+          { "id": "f-users-last-login", "name": "last_login_at", "type": "Date", "index": true }
+        ]
+      }
+    },
+    {
+      "id": "col-categories",
+      "databaseId": "db-commerce",
+      "type": "collection",
+      "position": { "x": 80, "y": 460 },
+      "selected": false,
+      "data": {
+        "label": "Categories",
+        "timestampsEnabled": true,
+        "schemaCollectionName": "categories",
+        "fields": [
+          { "id": "f-cat-id", "name": "_id", "type": "ObjectId", "key": true },
+          { "id": "f-cat-name", "name": "name", "type": "String", "required": true, "unique": true, "trim": true },
+          { "id": "f-cat-slug", "name": "slug", "type": "String", "required": true, "unique": true, "lowercase": true, "trim": true, "index": true },
+          { "id": "f-cat-parent-id", "name": "parent_id", "type": "ObjectId", "ref": "Categories", "index": true },
+          { "id": "f-cat-active", "name": "is_active", "type": "Boolean", "defaultBooleanMode": "true" }
+        ]
+      }
+    },
+    {
+      "id": "col-products",
+      "databaseId": "db-commerce",
+      "type": "collection",
+      "position": { "x": 430, "y": 430 },
+      "selected": false,
+      "data": {
+        "label": "Products",
+        "timestampsEnabled": true,
+        "schemaCollectionName": "products",
+        "schemaAutoIndexMode": "true",
+        "fields": [
+          { "id": "f-prod-id", "name": "_id", "type": "ObjectId", "key": true },
+          { "id": "f-prod-sku", "name": "sku", "type": "String", "required": true, "unique": true, "index": true, "uppercase": true, "trim": true },
+          { "id": "f-prod-name", "name": "name", "type": "String", "required": true, "trim": true, "minLength": 3, "maxLength": 160 },
+          { "id": "f-prod-category-id", "name": "category_id", "type": "ObjectId", "required": true, "ref": "Categories", "index": true },
+          { "id": "f-prod-price", "name": "price", "type": "Number", "required": true, "min": 0 },
+          { "id": "f-prod-stock", "name": "stock", "type": "Number", "required": true, "min": 0, "defaultNumber": 0 },
+          { "id": "f-prod-tags", "name": "tags", "type": "Array", "arrayOfType": "String" },
+          {
+            "id": "f-prod-variants",
+            "name": "variants",
+            "type": "Array",
+            "children": [
+              { "id": "f-prod-var-code", "name": "code", "type": "String", "required": true, "uppercase": true, "trim": true },
+              { "id": "f-prod-var-name", "name": "name", "type": "String", "required": true, "trim": true },
+              { "id": "f-prod-var-price", "name": "price", "type": "Number", "min": 0 },
+              { "id": "f-prod-var-stock", "name": "stock", "type": "Number", "min": 0, "defaultNumber": 0 }
+            ]
+          },
+          { "id": "f-prod-metadata", "name": "metadata", "type": "Map", "mapOfType": "String" },
+          { "id": "f-prod-active", "name": "is_active", "type": "Boolean", "defaultBooleanMode": "true", "index": true }
+        ]
+      }
+    },
+    {
+      "id": "col-orders",
+      "databaseId": "db-commerce",
+      "type": "collection",
+      "position": { "x": 830, "y": 210 },
+      "selected": false,
+      "data": {
+        "label": "Orders",
+        "timestampsEnabled": true,
+        "schemaCollectionName": "orders",
+        "schemaStrictMode": "true",
+        "fields": [
+          { "id": "f-order-id", "name": "_id", "type": "ObjectId", "key": true },
+          { "id": "f-order-number", "name": "order_number", "type": "String", "required": true, "unique": true, "index": true, "uppercase": true },
+          { "id": "f-order-user-id", "name": "user_id", "type": "ObjectId", "required": true, "ref": "Users", "index": true },
+          {
+            "id": "f-order-items",
+            "name": "items",
+            "type": "Array",
+            "children": [
+              { "id": "f-order-item-product-id", "name": "product_id", "type": "ObjectId", "required": true, "ref": "Products", "index": true },
+              { "id": "f-order-item-name", "name": "name", "type": "String", "required": true },
+              { "id": "f-order-item-price", "name": "price", "type": "Number", "required": true, "min": 0 },
+              { "id": "f-order-item-qty", "name": "qty", "type": "Number", "required": true, "min": 1 }
+            ]
+          },
+          { "id": "f-order-subtotal", "name": "subtotal", "type": "Number", "required": true, "min": 0 },
+          { "id": "f-order-discount", "name": "discount", "type": "Number", "min": 0, "defaultNumber": 0 },
+          { "id": "f-order-shipping", "name": "shipping_cost", "type": "Number", "min": 0, "defaultNumber": 0 },
+          { "id": "f-order-total", "name": "total", "type": "Number", "required": true, "min": 0, "index": true },
+          { "id": "f-order-status", "name": "status", "type": "String", "required": true, "enumValues": ["PENDING", "PAID", "SHIPPED", "COMPLETED", "CANCELLED"], "defaultString": "PENDING", "index": true },
+          { "id": "f-order-paid-at", "name": "paid_at", "type": "Date" },
+          { "id": "f-order-created-by", "name": "created_by", "type": "ObjectId", "ref": "Users", "index": true }
+        ]
+      }
+    },
+    {
+      "id": "col-payments",
+      "databaseId": "db-commerce",
+      "type": "collection",
+      "position": { "x": 1240, "y": 180 },
+      "selected": false,
+      "data": {
+        "label": "Payments",
+        "timestampsEnabled": true,
+        "schemaCollectionName": "payments",
+        "fields": [
+          { "id": "f-pay-id", "name": "_id", "type": "ObjectId", "key": true },
+          { "id": "f-pay-order-id", "name": "order_id", "type": "ObjectId", "required": true, "ref": "Orders", "index": true },
+          { "id": "f-pay-paid-by", "name": "paid_by", "type": "ObjectId", "ref": "Users", "index": true },
+          { "id": "f-pay-method", "name": "method", "type": "String", "required": true, "enumValues": ["BANK_TRANSFER", "CREDIT_CARD", "E_WALLET", "CASH"] },
+          { "id": "f-pay-amount", "name": "amount", "type": "Number", "required": true, "min": 0 },
+          { "id": "f-pay-status", "name": "status", "type": "String", "required": true, "enumValues": ["PENDING", "SUCCESS", "FAILED", "REFUNDED"], "defaultString": "PENDING", "index": true },
+          { "id": "f-pay-reference", "name": "reference_no", "type": "String", "unique": true, "sparse": true, "index": true },
+          { "id": "f-pay-paid-at", "name": "paid_at", "type": "Date" }
+        ]
+      }
+    },
+    {
+      "id": "col-audit-logs",
+      "databaseId": "db-commerce",
+      "type": "collection",
+      "position": { "x": 1240, "y": 520 },
+      "selected": false,
+      "data": {
+        "label": "AuditLogs",
+        "timestampsEnabled": true,
+        "schemaCollectionName": "audit_logs",
+        "schemaAutoIndexMode": "true",
+        "fields": [
+          { "id": "f-log-id", "name": "_id", "type": "ObjectId", "key": true },
+          { "id": "f-log-action", "name": "action", "type": "String", "required": true, "index": true, "uppercase": true },
+          { "id": "f-log-actor-id", "name": "actor_id", "type": "ObjectId", "ref": "Users", "index": true },
+          { "id": "f-log-order-id", "name": "order_id", "type": "ObjectId", "ref": "Orders", "index": true },
+          { "id": "f-log-product-id", "name": "product_id", "type": "ObjectId", "ref": "Products", "index": true },
+          { "id": "f-log-ip", "name": "ip_address", "type": "String", "trim": true },
+          { "id": "f-log-user-agent", "name": "user_agent", "type": "String", "trim": true },
+          { "id": "f-log-payload", "name": "payload", "type": "Mixed" }
+        ]
+      }
+    },
+    {
+      "id": "col-event-logs",
+      "databaseId": "db-analytics",
+      "type": "collection",
+      "position": { "x": 100, "y": 120 },
+      "selected": false,
+      "data": {
+        "label": "EventLogs",
+        "timestampsEnabled": true,
+        "schemaCollectionName": "event_logs",
+        "fields": [
+          { "id": "f-event-id", "name": "_id", "type": "ObjectId", "key": true },
+          { "id": "f-event-name", "name": "event_name", "type": "String", "required": true, "index": true, "trim": true },
+          { "id": "f-event-user-id", "name": "user_id", "type": "ObjectId", "index": true, "ref": "Users" },
+          { "id": "f-event-session", "name": "session_id", "type": "String", "index": true },
+          { "id": "f-event-meta", "name": "meta", "type": "Mixed" },
+          { "id": "f-event-at", "name": "event_at", "type": "Date", "index": true }
+        ]
+      }
+    }
+  ],
+  "edges": [
+    { "id": "e-roles-users-role", "databaseId": "db-commerce", "source": "col-roles", "target": "col-users", "sourceHandle": "f-roles-id", "targetHandle": "f-users-role-id", "animated": false },
+    { "id": "e-users-orders-user", "databaseId": "db-commerce", "source": "col-users", "target": "col-orders", "sourceHandle": "f-users-id", "targetHandle": "f-order-user-id", "animated": false },
+    { "id": "e-users-orders-createdby", "databaseId": "db-commerce", "source": "col-users", "target": "col-orders", "sourceHandle": "f-users-id", "targetHandle": "f-order-created-by", "animated": false },
+    { "id": "e-categories-products-category", "databaseId": "db-commerce", "source": "col-categories", "target": "col-products", "sourceHandle": "f-cat-id", "targetHandle": "f-prod-category-id", "animated": false },
+    { "id": "e-products-orders-items", "databaseId": "db-commerce", "source": "col-products", "target": "col-orders", "sourceHandle": "f-prod-id", "targetHandle": "f-order-item-product-id", "animated": false },
+    { "id": "e-orders-payments-order", "databaseId": "db-commerce", "source": "col-orders", "target": "col-payments", "sourceHandle": "f-order-id", "targetHandle": "f-pay-order-id", "animated": false },
+    { "id": "e-users-payments-paidby", "databaseId": "db-commerce", "source": "col-users", "target": "col-payments", "sourceHandle": "f-users-id", "targetHandle": "f-pay-paid-by", "animated": false },
+    { "id": "e-users-logs-actor", "databaseId": "db-commerce", "source": "col-users", "target": "col-audit-logs", "sourceHandle": "f-users-id", "targetHandle": "f-log-actor-id", "animated": false },
+    { "id": "e-orders-logs-order", "databaseId": "db-commerce", "source": "col-orders", "target": "col-audit-logs", "sourceHandle": "f-order-id", "targetHandle": "f-log-order-id", "animated": false },
+    { "id": "e-products-logs-product", "databaseId": "db-commerce", "source": "col-products", "target": "col-audit-logs", "sourceHandle": "f-prod-id", "targetHandle": "f-log-product-id", "animated": false }
+  ]
+}

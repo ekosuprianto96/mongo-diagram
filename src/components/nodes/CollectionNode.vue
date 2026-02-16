@@ -1,15 +1,27 @@
 <script setup>
 import { nextTick, onUnmounted, ref, watch } from 'vue'
 import { useVueFlow } from '@vue-flow/core'
-import { MoreVertical, Plus } from 'lucide-vue-next'
+import { MoreVertical, Plus, Database } from 'lucide-vue-next'
 import { useSchemaStore } from '../../stores/schemaStore'
 import FieldItem from './FieldItem.vue'
 
-const props = defineProps(['data', 'id'])
-const emit = defineEmits(['update-node'])
+const props = defineProps({
+  data: {
+    type: Object,
+    required: true
+  },
+  id: {
+    type: String,
+    required: true
+  },
+  selected: {
+    type: Boolean,
+    default: false
+  }
+})
 
 const store = useSchemaStore()
-const { updateNodeInternals } = useVueFlow()
+const { updateNodeInternals, findNode, addSelectedNodes, removeSelectedNodes } = useVueFlow()
 const isEditing = ref(false)
 const tempLabel = ref('')
 const titleInput = ref(null)
@@ -30,8 +42,59 @@ const saveTitle = () => {
     isEditing.value = false
 }
 
-const selectCollection = () => {
-    store.selectItem(props.id, 'collection')
+const syncNodeSelectionFromStore = () => {
+    const selectedIds = new Set(
+        store.activeCollections
+            .filter((collection) => collection.selected)
+            .map((collection) => collection.id)
+    )
+
+    const nodesToSelect = []
+    const nodesToUnselect = []
+
+    store.activeCollections.forEach((collection) => {
+        const node = findNode(collection.id)
+        if (!node) return
+
+        if (selectedIds.has(collection.id)) {
+            if (!node.selected) nodesToSelect.push(node)
+            return
+        }
+
+        if (node.selected) nodesToUnselect.push(node)
+    })
+
+    if (nodesToUnselect.length > 0) {
+        removeSelectedNodes(nodesToUnselect)
+    }
+    if (nodesToSelect.length > 0) {
+        addSelectedNodes(nodesToSelect)
+    }
+}
+
+const selectCollection = (event) => {
+    const isMultiSelect = event.shiftKey || event.metaKey || event.ctrlKey
+    const node = findNode(props.id)
+    if (!node) return
+
+    if (isMultiSelect) {
+        const selectedCount = store.activeCollections.filter((collection) => collection.selected).length
+        const alreadySelected = Boolean(
+            store.activeCollections.find((collection) => collection.id === props.id)?.selected
+        )
+
+        if (alreadySelected && selectedCount === 1) {
+            store.selectItem(props.id, 'collection')
+            syncNodeSelectionFromStore()
+            return
+        }
+        store.setCollectionSelection(props.id, true)
+        syncNodeSelectionFromStore()
+        return
+    }
+
+    store.setCollectionSelection(props.id, false)
+    syncNodeSelectionFromStore()
 }
 
 const addField = () => {
@@ -82,33 +145,44 @@ onUnmounted(() => {
 <template>
   <div 
     @click.stop="selectCollection"
-    class="min-w-[200px] bg-[#1e1e1e] rounded-lg border shadow-xl overflow-hidden transition-all duration-200 group"
-    :class="store.selectedItemId === id && store.selectedItemType === 'collection' ? 'border-emerald-500 ring-1 ring-emerald-500' : 'border-gray-700 hover:border-gray-600'"
+    class="min-w-[276px] bg-gradient-to-b from-[#1f1f23] to-[#17171a] rounded-xl border shadow-[0_8px_28px_rgba(0,0,0,0.35)] overflow-hidden transition-all duration-200 group"
+    :class="selected || (store.selectedItemId === id && store.selectedItemType === 'collection') ? 'border-emerald-400 ring-1 ring-emerald-400/90 shadow-[0_8px_28px_rgba(16,185,129,0.16)]' : 'border-gray-700/90 hover:border-gray-500'"
   >
+    <div class="h-0.5 bg-gradient-to-r from-emerald-400/80 via-cyan-400/70 to-blue-400/60"></div>
+
     <!-- Header -->
     <div 
-      class="px-4 py-2 bg-[#2d2d2d] border-b border-gray-700 flex justify-between items-center handle drag-handle cursor-grab active:cursor-grabbing"
+      class="px-3 py-2 bg-[#27272d] border-b border-gray-700/80 flex justify-between items-center handle drag-handle cursor-grab active:cursor-grabbing"
       @dblclick.stop="startEditing"
     >
-      <div v-if="isEditing" class="flex-1 mr-2">
+      <div class="flex items-center gap-2 min-w-0 flex-1 mr-2">
+        <div class="w-6 h-6 rounded-md bg-emerald-500/15 border border-emerald-500/30 flex items-center justify-center text-emerald-400">
+          <Database :size="13" />
+        </div>
+
+        <div v-if="isEditing" class="flex-1 min-w-0">
         <input 
           ref="titleInput"
           v-model="tempLabel"
           @blur="saveTitle"
           @keydown.enter="saveTitle"
-          class="w-full bg-[#1e1e1e] text-emerald-400 font-bold px-1 py-0.5 rounded border border-emerald-500 focus:outline-none text-sm"
+          class="w-full bg-[#1e1e1e] text-emerald-300 font-bold px-2 py-1 rounded border border-emerald-500 focus:outline-none text-sm"
         />
       </div>
-      <span v-else class="font-bold text-emerald-400 truncate flex-1 select-none">{{ data.label }}</span>
+        <div v-else class="min-w-0 flex-1">
+          <span class="font-bold text-emerald-300 truncate block leading-tight select-none">{{ data.label }}</span>
+          <span class="text-[10px] text-gray-500">{{ data.fields.length }} fields</span>
+        </div>
+      </div>
       
       <div class="flex gap-1" v-if="!isEditing">
-        <button class="p-1 hover:bg-gray-700 rounded text-gray-400 hover:text-white">
+        <button class="p-1 rounded text-gray-500 hover:text-white hover:bg-gray-700/70 transition-colors">
           <MoreVertical :size="14" />
         </button>
       </div>
     </div>
 
-    <div class="p-2 space-y-1 nodrag">
+    <div class="px-2.5 py-2.5 space-y-1.5 nodrag bg-[#1a1a1f]">
       <TransitionGroup name="field-list">
         <FieldItem 
           v-for="(field, index) in data.fields" 
@@ -124,8 +198,8 @@ onUnmounted(() => {
     </div>
 
     <!-- Footer -->
-    <div class="p-2 border-t border-gray-700 bg-[#252525]">
-      <button @click.stop="addField" class="w-full flex items-center justify-center gap-1 py-1 text-xs font-medium text-gray-400 hover:text-emerald-400 hover:bg-[#2a2a2a] rounded transition-colors">
+    <div class="p-2 border-t border-gray-700/80 bg-[#212127]">
+      <button @click.stop="addField" class="w-full flex items-center justify-center gap-1 py-1.5 text-xs font-medium text-gray-300 hover:text-emerald-200 bg-[#2a2a33] hover:bg-[#30303a] border border-gray-600/60 rounded-md transition-colors">
         <Plus :size="14" />
         Add Field
       </button>

@@ -1,7 +1,7 @@
 <script setup>
 import { computed, onMounted, onUnmounted, ref } from 'vue'
 import { Handle, Position } from '@vue-flow/core'
-import { Plus } from 'lucide-vue-next'
+import { Plus, GripVertical } from 'lucide-vue-next'
 import { useSchemaStore } from '../../stores/schemaStore'
 
 const props = defineProps({
@@ -34,6 +34,21 @@ const store = useSchemaStore()
 const isSelected = computed(() => store.selectedItemId === props.field.id)
 const indentSize = 16
 const paddingLeft = computed(() => `${props.level * indentSize + 16}px`)
+const typeClass = computed(() => {
+    const typeColorMap = {
+        ObjectId: 'text-amber-400',
+        String: 'text-blue-400',
+        Number: 'text-violet-400',
+        Date: 'text-emerald-400',
+        Boolean: 'text-pink-400',
+        Array: 'text-slate-300',
+        Object: 'text-cyan-300',
+        Map: 'text-indigo-300',
+        Buffer: 'text-orange-300',
+        Mixed: 'text-gray-300',
+    }
+    return typeColorMap[props.field.type] || 'text-gray-300'
+})
 
 const isEditing = ref(false)
 const tempName = ref('')
@@ -140,7 +155,7 @@ onUnmounted(() => {
   <div class="nodrag">
       <div 
         @click.stop="selectField"
-        class="relative group/field flex items-center justify-between text-sm py-1 pr-2 rounded cursor-pointer border-2 transition-all duration-150"
+        class="relative group/field flex items-center justify-between text-sm py-1.5 pr-2.5 rounded cursor-pointer border-2 transition-all duration-150"
         :class="[
             isSelected ? 'bg-[#2a2a2a] border-emerald-500' : 'border-transparent hover:bg-[#2a2a2a]',
             isDragOver ? 'border-t-emerald-500 bg-[#2a2a2a]/50 scale-[1.02]' : ''
@@ -194,6 +209,12 @@ onUnmounted(() => {
         />
 
         <div class="flex items-center gap-2 flex-1 min-w-0" @dblclick.stop="startEditing">
+            <span
+                class="text-gray-500/80 group-hover/field:text-gray-300 transition-colors cursor-grab active:cursor-grabbing"
+                title="Drag to reorder field"
+            >
+                <GripVertical :size="13" />
+            </span>
             <span v-if="field.key" class="text-xs text-yellow-500 font-mono">PK</span>
             
             <div v-if="isEditing" class="flex-1 mr-2">
@@ -206,19 +227,19 @@ onUnmounted(() => {
                     class="w-full bg-[#1e1e1e] text-gray-200 font-bold px-1 py-0.5 rounded border border-emerald-500 focus:outline-none text-xs"
                 />
             </div>
-            <span v-else class="text-gray-200 truncate select-none">{{ field.name }}</span>
+            <span v-else class="text-[13px] text-gray-100 truncate select-none">{{ field.name }}</span>
             
             <span v-if="field.required" class="text-[10px] text-red-500 font-bold">*</span>
         </div>
         
-        <div class="flex items-center gap-2">
-            <span class="text-xs text-gray-400 font-mono">{{ field.type }}</span>
+        <div class="flex items-center gap-2 ml-2">
+            <span class="w-[82px] text-right text-[11px] font-semibold font-mono uppercase tracking-wider" :class="typeClass">{{ field.type }}</span>
             <button 
                 v-if="field.type === 'Object' || field.type === 'Array'" 
                 @click.stop="addChildField"
                 class="p-0.5 rounded hover:bg-emerald-600/20 text-gray-400 hover:text-emerald-400 opacity-0 group-hover/field:opacity-100 transition-opacity"
             >
-                <Plus :size="12" />
+                <Plus :size="13" />
             </button>
         </div>
 

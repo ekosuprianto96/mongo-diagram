@@ -10,6 +10,7 @@ You can create collections, add fields (including nested object/array fields), b
 ## Main Features
 
 - Node-based visual editor for MongoDB collections.
+- Multi-database workspace flow: choose/create database first, then manage collections inside it.
 - Create/delete collections.
 - Create/delete fields in collections.
 - Supports nested fields (`Object` / `Array`) in a tree structure.
@@ -19,13 +20,16 @@ You can create collections, add fields (including nested object/array fields), b
   - Collection name
   - Timestamps option
   - Custom `createdAt` / `updatedAt` field names
+  - Advanced Mongoose schema options via structured controls (`select`, `input`, `switch`)
 - Edit field properties:
   - Field name
   - Data type
-  - `required`, `unique`, `index`
-  - `default`
-  - `enum` (for `String` type)
-  - `ref` (for `ObjectId` type)
+  - Type-aware options via structured controls (String/Number/Boolean/Date/ObjectId/Map/Array)
+  - `required`, `unique`, `index`, `sparse`, `immutable`, `select`, `alias`
+  - String options: `trim`, `lowercase`, `uppercase`, `minLength`, `maxLength`, `match`, enum list, default
+  - Number options: `min`, `max`, default
+  - Date options: default (`Date.now`/custom), `min`, `max`, `expires`
+  - ObjectId options: `ref`, default
 - Export Mongoose schema code:
   - All collections
   - Or a single collection
