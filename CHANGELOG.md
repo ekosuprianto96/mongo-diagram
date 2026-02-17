@@ -11,6 +11,21 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 - Placeholder for upcoming changes.
 
+## [2.3.1] - 2026-02-17
+
+### Fixed
+
+- Sidebar database selector row overflow on narrow sidebar width:
+  - select now shrinks correctly with `min-w-0`
+  - action buttons stay stable with `shrink-0`
+
+### Changed
+
+- Release metadata and docs synced to `v2.3.1`:
+  - `package.json` version
+  - `.env` -> `VITE_APP_VERSION=2.3.1`
+  - `README.md`, `RELEASE_NOTES.md`, `CHANGELOG.md`
+
 ## [2.3.0] - 2026-02-17
 
 ### Added

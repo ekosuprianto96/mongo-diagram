@@ -1,5 +1,24 @@
 # Release Notes
 
+## v2.3.1 - 2026-02-17
+
+### Highlights
+
+- Minor patch release for UI stability and version synchronization.
+
+### Fixed
+
+- Resolved sidebar overflow in database selector row on narrow width:
+  - `select` now uses `min-w-0` and can shrink correctly.
+  - action buttons now use `shrink-0` to prevent layout break.
+
+### Updated
+
+- Synced release metadata to `v2.3.1`:
+  - `package.json` version
+  - `.env` `VITE_APP_VERSION`
+  - `README.md`, `CHANGELOG.md`, and `RELEASE_NOTES.md`
+
 ## v2.3.0 - 2026-02-17
 
 ### Highlights

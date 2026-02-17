@@ -141,18 +141,18 @@ const handleImportProject = async (event) => {
         <div class="p-4 space-y-4 flex-1 overflow-y-auto">
             <div class="space-y-2">
                 <p class="text-xs font-bold text-gray-500 uppercase tracking-wider">Database</p>
-                <div class="flex gap-2">
+                <div class="flex min-w-0 gap-2">
                     <select
                         :value="store.activeDatabaseId"
                         @change="selectDatabase"
-                        class="flex-1 bg-[#2a2a2a] border border-gray-600 rounded px-2 py-1.5 text-white text-sm focus:border-emerald-500 focus:outline-none"
+                        class="min-w-0 flex-1 bg-[#2a2a2a] border border-gray-600 rounded px-2 py-1.5 text-white text-sm focus:border-emerald-500 focus:outline-none"
                     >
                         <option v-for="db in store.databases" :key="db.id" :value="db.id">{{ db.name }}</option>
                     </select>
-                    <button @click="openCreateDbModal" class="px-2 py-1.5 rounded bg-[#2d2d2d] hover:bg-[#3d3d3d] text-gray-300 border border-gray-600/70" title="Create Database">
+                    <button @click="openCreateDbModal" class="shrink-0 px-2 py-1.5 rounded bg-[#2d2d2d] hover:bg-[#3d3d3d] text-gray-300 border border-gray-600/70" title="Create Database">
                         <Plus :size="14" />
                     </button>
-                    <button @click="deleteActiveDatabase" class="px-2 py-1.5 rounded bg-red-900/30 hover:bg-red-900/50 text-red-300 border border-red-900/60" title="Delete Active Database">
+                    <button @click="deleteActiveDatabase" class="shrink-0 px-2 py-1.5 rounded bg-red-900/30 hover:bg-red-900/50 text-red-300 border border-red-900/60" title="Delete Active Database">
                         <Trash2 :size="14" />
                     </button>
                 </div>
