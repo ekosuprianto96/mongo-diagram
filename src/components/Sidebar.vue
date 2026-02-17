@@ -2,7 +2,7 @@
 import { computed, ref } from 'vue'
 import { useSchemaStore } from '../stores/schemaStore'
 import { useUiStore } from '../stores/uiStore'
-import { Plus, Database, Code, Trash2, Download, Upload, PanelLeftClose } from 'lucide-vue-next'
+import { Plus, Database, Code, Trash2, Download, Upload, PanelLeftClose, LayoutGrid } from 'lucide-vue-next'
 import CreateDatabaseModal from './CreateDatabaseModal.vue'
 import { createDatabaseAdapter, getDatabaseEntityTerms, getNextDefaultEntityName } from '../factories/databaseFactory'
 
@@ -13,6 +13,16 @@ const importInput = ref(null)
 const isCreateDbModalOpen = ref(false)
 const entityTerms = computed(() => getDatabaseEntityTerms(store.activeDatabaseType))
 const appVersion = `v${__APP_VERSION__ || import.meta.env.VITE_APP_VERSION || '0.0.0'}`
+
+const handleAutoLayout = () => {
+    if (!store.activeDatabaseId) return
+    const changed = store.autoArrangeActiveDatabase()
+    if (changed) {
+        ui.showToast('Auto-layout applied.', 'success')
+    } else {
+        ui.showToast('Not enough items to layout.', 'info')
+    }
+}
 
 const addNewCollection = () => {
     if (!store.activeDatabaseId) return
@@ -159,7 +169,12 @@ const handleImportProject = async (event) => {
             </div>
 
             <div class="space-y-2">
-                <p class="text-xs font-bold text-gray-500 uppercase tracking-wider">{{ entityTerms.plural }}</p>
+                <div class="flex items-center justify-between">
+                    <p class="text-xs font-bold text-gray-500 uppercase tracking-wider">{{ entityTerms.plural }}</p>
+                    <button @click="handleAutoLayout" class="p-1 hover:bg-[#2a2a2a] rounded text-gray-500 hover:text-white transition-colors" title="Auto Layout / Arrange Nodes">
+                        <LayoutGrid :size="14" />
+                    </button>
+                </div>
                 <div v-for="collection in store.activeCollections" :key="collection.id" 
                      @click="selectCollection($event, collection.id)"
                      class="flex items-center gap-2 p-2 rounded cursor-pointer transition-colors group"

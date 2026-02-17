@@ -5,11 +5,30 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## [Unreleased]
+## [2.4.0] - 2026-02-17
 
 ### Added
 
-- Placeholder for upcoming changes.
+- New code export targets for SQL-based databases (MySQL & PostgreSQL):
+    - **Prisma** schema export.
+    - **Laravel Migration** export.
+    - **TypeORM Entity** export.
+    - **Sequelize Model** export.
+- **Cardinality** support for relationships:
+    - Support for **One-to-One (1:1)**, **One-to-Many (1:N)**, and **Many-to-Many (N:N)**.
+    - Double-click on edges to quickly cycle through cardinality types.
+    - Relationship legend in the bottom-left corner of the canvas.
+    - Visual representation for each type (Solid: 1-1, Dashed: 1-N, Dotted: N-N).
+
+### Fixed
+
+- Visual tree lines for nested objects/arrays are now continuous and properly aligned.
+- Stabilized drag-and-drop field reordering in the properties panel and collection nodes.
+
+### Changed
+
+- Updated terminology based on active database type (Collections for MongoDB, Tables for SQL).
+- Refined SQL export generation order for better reliability (Tables -> Indexes -> Foreign Keys).
 
 ## [2.3.2] - 2026-02-17
 

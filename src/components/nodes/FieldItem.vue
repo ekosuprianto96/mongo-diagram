@@ -36,19 +36,34 @@ const isSelected = computed(() => store.selectedItemId === props.field.id)
 const indentSize = 16
 const paddingLeft = computed(() => `${props.level * indentSize + 16}px`)
 const typeClass = computed(() => {
-    const typeColorMap = {
-        ObjectId: 'text-amber-400',
-        String: 'text-blue-400',
-        Number: 'text-violet-400',
-        Date: 'text-emerald-400',
-        Boolean: 'text-pink-400',
-        Array: 'text-slate-300',
-        Object: 'text-cyan-300',
-        Map: 'text-indigo-300',
-        Buffer: 'text-orange-300',
-        Mixed: 'text-gray-300',
-    }
-    return typeColorMap[props.field.type] || 'text-gray-300'
+    const type = String(props.field?.type || '').trim().toUpperCase()
+
+    const numberTypes = new Set([
+        'NUMBER', 'INT', 'INTEGER', 'BIGINT', 'TINYINT', 'SMALLINT',
+        'DECIMAL', 'FLOAT', 'DOUBLE', 'REAL', 'DOUBLE PRECISION',
+        'SERIAL', 'BIGSERIAL',
+    ])
+    const stringTypes = new Set([
+        'STRING', 'VARCHAR', 'TEXT', 'CHAR', 'LONGTEXT',
+    ])
+    const dateTypes = new Set([
+        'DATE', 'DATETIME', 'TIMESTAMP', 'TIME', 'YEAR', 'INTERVAL',
+    ])
+    const boolTypes = new Set(['BOOLEAN'])
+    const jsonTypes = new Set(['ARRAY', 'OBJECT', 'MAP', 'MIXED', 'JSON', 'JSONB', 'XML'])
+    const binaryTypes = new Set(['BUFFER', 'BLOB', 'BYTEA'])
+    const idTypes = new Set(['OBJECTID', 'UUID'])
+    const enumTypes = new Set(['ENUM'])
+
+    if (idTypes.has(type)) return 'text-amber-400'
+    if (stringTypes.has(type)) return 'text-blue-400'
+    if (numberTypes.has(type)) return 'text-violet-400'
+    if (dateTypes.has(type)) return 'text-emerald-400'
+    if (boolTypes.has(type)) return 'text-pink-400'
+    if (jsonTypes.has(type)) return 'text-cyan-300'
+    if (binaryTypes.has(type)) return 'text-orange-300'
+    if (enumTypes.has(type)) return 'text-fuchsia-300'
+    return 'text-gray-300'
 })
 
 const isEditing = ref(false)

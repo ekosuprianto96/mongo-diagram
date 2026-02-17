@@ -502,6 +502,10 @@ export const useSchemaStore = defineStore('schema', {
                     return result ? result.field : null
                 }
             }
+
+            if (state.selectedItemType === 'edge') {
+                return state.edges.find((edge) => edge.id === state.selectedItemId) || null
+            }
             return null
         },
         getCollectionCode: (state) => (id) => {
@@ -873,6 +877,93 @@ export const useSchemaStore = defineStore('schema', {
                 this.syncHistoryState()
             }
         },
+        autoArrangeActiveDatabase() {
+            const dbId = this.activeDatabaseId
+            const activeCollections = this.collections.filter((collection) => collection.databaseId === dbId)
+            if (activeCollections.length < 2) return false
+
+            const idSet = new Set(activeCollections.map((collection) => collection.id))
+            const outgoingMap = new Map()
+            const inDegreeMap = new Map()
+            const layerMap = new Map()
+
+            activeCollections.forEach((collection) => {
+                outgoingMap.set(collection.id, [])
+                inDegreeMap.set(collection.id, 0)
+                layerMap.set(collection.id, 0)
+            })
+
+            this.activeEdges.forEach((edge) => {
+                if (!idSet.has(edge.source) || !idSet.has(edge.target)) return
+                if (edge.source === edge.target) return
+                outgoingMap.get(edge.source).push(edge.target)
+                inDegreeMap.set(edge.target, (inDegreeMap.get(edge.target) || 0) + 1)
+            })
+
+            const queue = activeCollections
+                .map((collection) => collection.id)
+                .filter((id) => (inDegreeMap.get(id) || 0) === 0)
+
+            const visited = new Set()
+            while (queue.length > 0) {
+                const currentId = queue.shift()
+                if (visited.has(currentId)) continue
+                visited.add(currentId)
+
+                const nextIds = outgoingMap.get(currentId) || []
+                nextIds.forEach((nextId) => {
+                    const nextLayer = Math.max(layerMap.get(nextId) || 0, (layerMap.get(currentId) || 0) + 1)
+                    layerMap.set(nextId, nextLayer)
+                    inDegreeMap.set(nextId, (inDegreeMap.get(nextId) || 0) - 1)
+                    if ((inDegreeMap.get(nextId) || 0) === 0) {
+                        queue.push(nextId)
+                    }
+                })
+            }
+
+            const maxLayer = Math.max(...Array.from(layerMap.values()))
+            activeCollections.forEach((collection) => {
+                if (!visited.has(collection.id)) {
+                    layerMap.set(collection.id, maxLayer + 1)
+                }
+            })
+
+            const layers = new Map()
+            activeCollections.forEach((collection) => {
+                const layer = layerMap.get(collection.id) || 0
+                if (!layers.has(layer)) layers.set(layer, [])
+                layers.get(layer).push(collection)
+            })
+
+            Array.from(layers.values()).forEach((collections) => {
+                collections.sort((a, b) => {
+                    const outboundA = (outgoingMap.get(a.id) || []).length
+                    const outboundB = (outgoingMap.get(b.id) || []).length
+                    if (outboundA !== outboundB) return outboundB - outboundA
+                    return String(a.data?.label || '').localeCompare(String(b.data?.label || ''))
+                })
+            })
+
+            const START_X = 80
+            const START_Y = 60
+            const X_GAP = 380
+            const Y_GAP = 260
+
+            this.recordHistory()
+            const layerEntries = Array.from(layers.entries()).sort((a, b) => a[0] - b[0])
+            layerEntries.forEach(([layer, collections]) => {
+                collections.forEach((collection, index) => {
+                    const target = this.collections.find((item) => item.id === collection.id)
+                    if (!target) return
+                    target.position = {
+                        x: START_X + layer * X_GAP,
+                        y: START_Y + index * Y_GAP,
+                    }
+                })
+            })
+            this.syncHistoryState()
+            return true
+        },
         addField(collectionId, field) {
             const collection = this.collections.find(c => c.id === collectionId)
             if (collection) {
@@ -976,6 +1067,41 @@ export const useSchemaStore = defineStore('schema', {
             if (this.selectedItemId === id) {
                 this.selectItem(null, null)
             }
+            this.syncHistoryState()
+        },
+        updateEdgeProps(id, newProps = {}) {
+            const edge = this.edges.find((item) => item.id === id)
+            if (!edge) return
+
+            this.recordHistory()
+            Object.assign(edge, newProps)
+
+            // Keep SQL FK metadata in sync with edge-level relation editor.
+            const targetCollection = this.collections.find((collection) => collection.id === edge.target)
+            const sourceCollection = this.collections.find((collection) => collection.id === edge.source)
+            const sourceFieldResult = sourceCollection
+                ? findFieldRecursively(sourceCollection.data?.fields || [], edge.sourceHandle)
+                : null
+            if (targetCollection && edge.targetHandle) {
+                const targetFieldResult = findFieldRecursively(targetCollection.data?.fields || [], edge.targetHandle)
+                if (targetFieldResult?.field) {
+                    targetFieldResult.field.foreignKey = true
+                    targetFieldResult.field.referencesTable = sourceCollection?.data?.label || targetFieldResult.field.referencesTable || ''
+                    targetFieldResult.field.referencesColumnId = edge.sourceHandle || targetFieldResult.field.referencesColumnId || ''
+                    targetFieldResult.field.referencesColumn = sourceFieldResult?.field?.name || targetFieldResult.field.referencesColumn || ''
+
+                    if (Object.prototype.hasOwnProperty.call(newProps, 'onDelete')) {
+                        targetFieldResult.field.onDelete = String(newProps.onDelete || '')
+                    }
+                    if (Object.prototype.hasOwnProperty.call(newProps, 'onUpdate')) {
+                        targetFieldResult.field.onUpdate = String(newProps.onUpdate || '')
+                    }
+                    if (Object.prototype.hasOwnProperty.call(newProps, 'constraintName')) {
+                        targetFieldResult.field.fkConstraintName = String(newProps.constraintName || '')
+                    }
+                }
+            }
+
             this.syncHistoryState()
         },
         copyNode(id) {

@@ -21,6 +21,8 @@ const emit = defineEmits(['close'])
 const store = useSchemaStore()
 const ui = useUiStore()
 const adapter = computed(() => createDatabaseAdapter(store.activeDatabaseType))
+const exportTargets = computed(() => adapter.value.getExportTargets())
+const selectedExportTarget = ref(adapter.value.getDefaultExportTarget())
 
 const resolveTargetCollections = () => {
     const activeDbId = store.activeDatabaseId
@@ -40,6 +42,7 @@ const resolveTargetCollections = () => {
 
 const code = computed(() => {
     return adapter.value.generateCode({
+        target: selectedExportTarget.value,
         store,
         collectionId: props.collectionId,
         collectionIds: props.collectionIds,
@@ -48,8 +51,19 @@ const code = computed(() => {
 })
 const editorContainer = ref(null)
 const isLoading = ref(true)
-const language = computed(() => adapter.value.getLanguage())
+const language = computed(() => adapter.value.getLanguage(selectedExportTarget.value))
 let editorInstance = null
+
+watch(
+    [adapter, exportTargets],
+    () => {
+        const allowed = new Set(exportTargets.value.map((option) => option.value))
+        if (!allowed.has(selectedExportTarget.value)) {
+            selectedExportTarget.value = adapter.value.getDefaultExportTarget()
+        }
+    },
+    { immediate: true }
+)
 
 const copyToClipboard = async () => {
     try {
@@ -155,8 +169,19 @@ onUnmounted(() => {
   <div v-if="isOpen" class="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-center justify-center p-4">
     <div class="bg-[#1e1e1e] border border-gray-700 rounded-lg shadow-2xl w-full max-w-4xl h-[80vh] flex flex-col overflow-hidden">
       <!-- Header -->
-      <div class="px-6 py-4 border-b border-gray-700 flex justify-between items-center bg-[#252525]">
-        <h2 class="text-xl font-bold text-white">Export Schema</h2>
+      <div class="px-6 py-4 border-b border-gray-700 flex justify-between items-center gap-3 bg-[#252525]">
+        <div class="flex min-w-0 items-center gap-3">
+          <h2 class="text-xl font-bold text-white">Export Schema</h2>
+          <div v-if="exportTargets.length > 1" class="flex items-center gap-2">
+            <span class="text-xs uppercase tracking-wide text-gray-400">Target</span>
+            <select
+              v-model="selectedExportTarget"
+              class="min-w-0 bg-[#2a2a2a] border border-gray-600 rounded px-2 py-1 text-xs text-white focus:border-emerald-500 focus:outline-none"
+            >
+              <option v-for="target in exportTargets" :key="target.value" :value="target.value">{{ target.label }}</option>
+            </select>
+          </div>
+        </div>
         <button @click="$emit('close')" class="text-gray-400 hover:text-white transition-colors">
           <X :size="20" />
         </button>

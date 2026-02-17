@@ -5,7 +5,7 @@ import DiagramCanvas from './components/DiagramCanvas.vue'
 import CodeExport from './components/CodeExport.vue'
 import PropertiesPanel from './components/PropertiesPanel.vue'
 import UiLayer from './components/UiLayer.vue'
-import { Sparkles, Download, Share2, Undo2, Redo2, PanelLeftOpen, Code, Trash2 } from 'lucide-vue-next'
+import { Sparkles, Download, Share2, Undo2, Redo2, PanelLeftOpen, Code, Trash2, Network } from 'lucide-vue-next'
 import { useSchemaStore } from './stores/schemaStore'
 import { useUiStore } from './stores/uiStore'
 import { getDatabaseEntityTerms } from './factories/databaseFactory'
@@ -18,7 +18,7 @@ const store = useSchemaStore()
 const ui = useUiStore()
 const entityTerms = computed(() => getDatabaseEntityTerms(store.activeDatabaseType))
 const shouldShowPropertiesPanel = computed(() => {
-    return store.selectedItemType === 'collection' || store.selectedItemType === 'field'
+    return store.selectedItemType === 'collection' || store.selectedItemType === 'field' || store.selectedItemType === 'edge'
 })
 const selectedCollections = computed(() => store.activeCollections.filter((collection) => collection.selected))
 const shouldShowBulkActions = computed(() => selectedCollections.value.length > 1)
@@ -71,6 +71,15 @@ const handleUndo = () => {
 
 const handleRedo = () => {
     store.redo()
+}
+
+const handleAutoArrange = () => {
+    const didArrange = store.autoArrangeActiveDatabase()
+    if (didArrange) {
+        ui.showToast(`${entityTerms.value.plural} arranged automatically.`, 'success')
+        return
+    }
+    ui.showToast(`Need at least 2 ${entityTerms.value.pluralLower} to arrange.`, 'error')
 }
 
 const toggleSidebar = () => {
@@ -129,6 +138,11 @@ onMounted(() => {
             <button @click="handleRedo" :disabled="!store.canRedo || !store.isDirty" class="flex items-center gap-2 px-3 py-1.5 bg-[#2d2d2d] hover:bg-[#3d3d3d] disabled:hover:bg-[#2d2d2d] text-gray-300 hover:text-white disabled:text-gray-500 rounded text-sm font-medium transition-colors border border-gray-600/50 disabled:opacity-60 disabled:cursor-not-allowed" title="Redo (Ctrl/Cmd+Shift+Z / Ctrl+Y)">
                 <Redo2 :size="16" />
                 Redo
+            </button>
+            <div class="w-px bg-gray-700 mx-1"></div>
+            <button @click="handleAutoArrange" class="flex items-center gap-2 px-3 py-1.5 bg-[#2d2d2d] hover:bg-[#3d3d3d] text-gray-300 hover:text-white rounded text-sm font-medium transition-colors border border-gray-600/50" title="Auto Arrange">
+                <Network :size="16" />
+                Auto Arrange
             </button>
             <div class="w-px bg-gray-700 mx-1"></div>
             <button @click="handleAiAnalysis" class="flex items-center gap-2 px-3 py-1.5 bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-500 hover:to-indigo-500 text-white rounded text-sm font-medium transition-all shadow-lg shadow-purple-900/20">

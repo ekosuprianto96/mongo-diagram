@@ -52,6 +52,11 @@ const sqlReferentialActionOptions = [
   { value: 'SET NULL', label: 'SET NULL' },
   { value: 'NO ACTION', label: 'NO ACTION' },
 ]
+const relationTypeOptions = [
+  { value: 'one_to_one', label: 'One-to-One (1:1)' },
+  { value: 'one_to_many', label: 'One-to-Many (1:N)' },
+  { value: 'many_to_many', label: 'Many-to-Many (N:N)' },
+]
 
 const referenceTableOptions = computed(() => store.activeCollections || [])
 const selectedReferenceTable = computed(() => {
@@ -69,6 +74,36 @@ const updateFieldOption = (key, value) => {
     if (!isField.value) return
     store.updateFieldProps(store.selectedCollectionId, store.selectedItemId, { [key]: value })
 }
+
+const updateEdgeOption = (key, value) => {
+    if (!isEdge.value || !selectedItem.value) return
+    store.updateEdgeProps(store.selectedItemId, { [key]: value })
+}
+
+const selectedEdgeInfo = computed(() => {
+    if (!isEdge.value || !selectedItem.value) return { sourceName: '-', sourceField: '-', targetName: '-', targetField: '-' }
+
+    const edge = selectedItem.value
+    const sourceCollection = store.collections.find((collection) => collection.id === edge.source)
+    const targetCollection = store.collections.find((collection) => collection.id === edge.target)
+    const findField = (fields, fieldId) => {
+        for (const field of fields || []) {
+            if (field.id === fieldId) return field
+            const child = findField(field.children || [], fieldId)
+            if (child) return child
+        }
+        return null
+    }
+    const sourceField = findField(sourceCollection?.data?.fields || [], edge.sourceHandle)
+    const targetField = findField(targetCollection?.data?.fields || [], edge.targetHandle)
+
+    return {
+        sourceName: sourceCollection?.data?.label || edge.source,
+        sourceField: sourceField?.name || edge.sourceHandle || '-',
+        targetName: targetCollection?.data?.label || edge.target,
+        targetField: targetField?.name || edge.targetHandle || '-',
+    }
+})
 
 const handleReferenceTableChange = (value) => {
     updateFieldOption('referencesTable', value)
@@ -170,9 +205,39 @@ const deleteItem = async () => {
 
     <!-- Edge Editor -->
     <div v-else-if="isEdge" class="p-4 space-y-6">
-        <div class="p-4 bg-[#2a2a2a] rounded text-center">
-            <h3 class="text-gray-300 font-medium mb-2">Relationship Selected</h3>
-            <p class="text-xs text-gray-500">You can delete this relationship connection.</p>
+        <div class="p-4 bg-[#2a2a2a] rounded space-y-2">
+            <h3 class="text-gray-200 font-semibold">Relationship</h3>
+            <p class="text-xs text-gray-400">{{ selectedEdgeInfo.sourceName }}.{{ selectedEdgeInfo.sourceField }} -> {{ selectedEdgeInfo.targetName }}.{{ selectedEdgeInfo.targetField }}</p>
+            <p class="text-[11px] text-gray-500">Tip: double-click edge to cycle cardinality quickly.</p>
+        </div>
+
+        <div class="space-y-2">
+            <label class="block text-xs font-bold text-gray-500 uppercase">Cardinality</label>
+            <select :value="selectedItem?.relationType || 'one_to_many'" @change="(e) => updateEdgeOption('relationType', e.target.value)" class="w-full bg-[#2a2a2a] border border-gray-600 rounded px-3 py-2 text-white text-sm">
+                <option v-for="option in relationTypeOptions" :key="option.value" :value="option.value">{{ option.label }}</option>
+            </select>
+        </div>
+
+        <div v-if="activeDbType !== DB_TYPES.MONGODB" class="space-y-3">
+            <label class="block text-xs font-bold text-gray-500 uppercase">Referential Actions</label>
+            <div class="grid grid-cols-2 gap-2">
+                <div>
+                    <label class="block text-[10px] text-gray-400 uppercase mb-1">On Delete</label>
+                    <select :value="selectedItem?.onDelete || ''" @change="(e) => updateEdgeOption('onDelete', e.target.value)" class="w-full bg-[#2a2a2a] border border-gray-600 rounded px-2 py-1 text-white text-xs">
+                        <option v-for="option in sqlReferentialActionOptions" :key="`edge-on-delete-${option.value}`" :value="option.value">{{ option.label }}</option>
+                    </select>
+                </div>
+                <div>
+                    <label class="block text-[10px] text-gray-400 uppercase mb-1">On Update</label>
+                    <select :value="selectedItem?.onUpdate || ''" @change="(e) => updateEdgeOption('onUpdate', e.target.value)" class="w-full bg-[#2a2a2a] border border-gray-600 rounded px-2 py-1 text-white text-xs">
+                        <option v-for="option in sqlReferentialActionOptions" :key="`edge-on-update-${option.value}`" :value="option.value">{{ option.label }}</option>
+                    </select>
+                </div>
+            </div>
+            <div>
+                <label class="block text-[10px] text-gray-400 uppercase mb-1">Constraint Name</label>
+                <input :value="selectedItem?.constraintName || ''" @input="(e) => updateEdgeOption('constraintName', e.target.value)" class="w-full bg-[#2a2a2a] border border-gray-600 rounded px-2 py-1 text-white text-xs" type="text" placeholder="optional" />
+            </div>
         </div>
 
         <div class="pt-4 border-t border-gray-700">

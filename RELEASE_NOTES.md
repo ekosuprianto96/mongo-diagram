@@ -1,5 +1,44 @@
 # Release Notes
 
+## v2.4.0 - 2026-02-17
+
+### Highlights
+
+- **Comprehensive Export Engine**: Added support for Prisma, Laravel Migrations, TypeORM Entities, and Sequelize Models.
+- **Visual Cardinality**: Fully integrated relationship cardinality (1:1, 1:N, N:N) with visual styles and a legend.
+- **UX Refinements**: Continuous lines for nested fields and improved drag-and-drop stability.
+
+### New Features
+
+- **Multi-Framework Export Support**:
+    - **Prisma Schema**: Export your diagram directly to a `.prisma` file structure.
+    - **Laravel Migrations**: Generate runnable PHP migrations with foreign key support.
+    - **TypeORM & Sequelize**: Support for popular Node.js ORMs with class/model generation.
+- **Relationship Cardinality**:
+    - Manage **1:1**, **1:N**, and **N:N** relationships with unique visual indicators.
+    - Double-click an edge to cycle through cardinality types instantly.
+    - Interactive **Relationship Legend** added to the canvas for quick reference.
+
+### Improved & Fixed
+
+- **Visual Tree Lines**: Fixed broken or disconnected lines for nested MongoDB fields.
+- **Drag & Drop**: Fixed various jumps and selection issues when reordering fields.
+- **SQL Generation**: Improved `ALTER TABLE` ordering for foreign key constraints to ensure schema runs correctly out of the box.
+
+### Files Added/Updated in this release
+
+- Added: `src/utils/prismaGenerator.js`
+- Added: `src/utils/laravelMigrationGenerator.js`
+- Added: `src/utils/typeormGenerator.js`
+- Added: `src/utils/sequelizeGenerator.js`
+- Updated: `src/components/DiagramCanvas.vue` (Legend & Cardinality styles)
+- Updated: `src/components/PropertiesPanel.vue` (Cardinality & Edge editor)
+- Updated: `src/components/nodes/FieldItem.vue` (Visual lines)
+- Updated: `src/stores/schemaStore.js` (Reordering logic)
+- Updated: `src/factories/databaseFactory.js` (Export targets)
+
+---
+
 ## v2.3.2 - 2026-02-17
 
 ### Highlights

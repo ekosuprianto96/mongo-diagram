@@ -9,40 +9,30 @@ You can model tables/collections, define fields, relationships, SQL constraints,
 
 ## Current Version
 
-- `v2.3.2`
+- `v2.4.0`
 - Version label in UI is loaded automatically from `package.json` via `VITE_APP_VERSION` sync.
 
 ## Main Features
 
 - Multi-database workspace (MongoDB, MySQL, PostgreSQL) with database switch/create/delete.
-- Dynamic naming by DB type:
-  - MongoDB uses Collection terminology.
-  - MySQL/PostgreSQL use Table terminology.
-- Ordered default naming to avoid duplicates:
-  - `new_collection_1`, `new_collection_2`, ...
-  - `new_table_1`, `new_table_2`, ...
+- Dynamic naming and terminology by DB type (Collection vs Table).
+- **Comprehensive Export Engine**:
+    - MongoDB => Mongoose schema code.
+    - SQL (MySQL/PostgreSQL) => SQL DDL, **Prisma**, **Laravel Migrations**, **TypeORM Entities**, and **Sequelize Models**.
+- **Relationship Cardinality**:
+    - Model **1:1**, **1:N**, and **N:N** relationships visually.
+    - Visual legend for relationship styles (Solid, Dashed, Dotted).
+    - Quick-toggle cardinality via double-click.
 - Visual schema editor:
-  - Add/delete nodes.
-  - Add/delete/reorder fields.
-  - Nested fields for MongoDB (`Object`, `Array`).
-  - Multi-select + bulk export/delete.
+    - Add/delete/reorder fields with stable drag-and-drop.
+    - Nested fields for MongoDB (`Object`, `Array`) with continuous visual lines.
+    - Multi-select + bulk export/delete.
 - SQL field options and constraints:
-  - `PRIMARY KEY`, `AUTO INCREMENT` / identity style support.
-  - `UNIQUE`, `NULLABLE`, `INDEX`.
-  - `FOREIGN KEY` + `ON DELETE` / `ON UPDATE`.
-  - `CHECK` constraint expression.
-- Export code:
-  - MongoDB => Mongoose schema code.
-  - MySQL/PostgreSQL => SQL DDL.
-- SQL export is generated in runnable order:
-  - `CREATE TABLE` first, then indexes, then foreign keys via `ALTER TABLE`.
-- Export/import project JSON:
-  - Strict payload validation on import.
-  - Better error messages for invalid structure.
-  - UI-only state (selection flags) is excluded from export payload.
-- Undo/Redo history with env-configurable limits:
-  - `VITE_HISTORY_MAX_SIZE`
-  - `VITE_HISTORY_RETENTION_MS`
+    - `PRIMARY KEY`, `AUTO INCREMENT`, `UNIQUE`, `NULLABLE`, `INDEX`.
+    - `FOREIGN KEY` + `ON DELETE` / `ON UPDATE`.
+    - `CHECK` constraint expressions.
+- Export/import project JSON with strict validation.
+- Undo/Redo history with configurable limits.
 - Local storage persistence + storage quota warning.
 
 ## Release Notes
