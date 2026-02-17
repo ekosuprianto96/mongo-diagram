@@ -1,0 +1,187 @@
+{
+  "version": 1,
+  "exportedAt": "2026-02-17T10:00:00.000Z",
+  "databases": [
+    { "id": "db-mongo", "name": "mongo_playground", "type": "MongoDB" },
+    { "id": "db-mysql", "name": "mysql_shop", "type": "MySQL" },
+    { "id": "db-pg", "name": "pg_billing", "type": "PostgreSQL" }
+  ],
+  "activeDatabaseId": "db-mongo",
+  "collections": [
+    {
+      "id": "col-mongo-users",
+      "databaseId": "db-mongo",
+      "type": "collection",
+      "position": { "x": 120, "y": 80 },
+      "data": {
+        "label": "users",
+        "timestampsEnabled": true,
+        "fields": [
+          { "id": "f-mu-id", "name": "_id", "type": "ObjectId", "key": true },
+          { "id": "f-mu-name", "name": "name", "type": "String", "required": true, "trim": true },
+          { "id": "f-mu-email", "name": "email", "type": "String", "required": true, "unique": true, "lowercase": true },
+          { "id": "f-mu-role", "name": "role", "type": "String", "enumValues": ["admin", "member"], "defaultString": "member" },
+          {
+            "id": "f-mu-profile",
+            "name": "profile",
+            "type": "Object",
+            "children": [
+              { "id": "f-mu-profile-bio", "name": "bio", "type": "String" },
+              { "id": "f-mu-profile-age", "name": "age", "type": "Number", "min": 0 }
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "id": "col-mongo-posts",
+      "databaseId": "db-mongo",
+      "type": "collection",
+      "position": { "x": 520, "y": 100 },
+      "data": {
+        "label": "posts",
+        "fields": [
+          { "id": "f-mp-id", "name": "_id", "type": "ObjectId", "key": true },
+          { "id": "f-mp-title", "name": "title", "type": "String", "required": true },
+          { "id": "f-mp-body", "name": "body", "type": "String" },
+          { "id": "f-mp-author", "name": "author_id", "type": "ObjectId", "ref": "users", "index": true },
+          { "id": "f-mp-tags", "name": "tags", "type": "Array", "arrayOfType": "String" }
+        ]
+      }
+    },
+
+    {
+      "id": "col-mysql-users",
+      "databaseId": "db-mysql",
+      "type": "collection",
+      "position": { "x": 140, "y": 320 },
+      "data": {
+        "label": "users",
+        "fields": [
+          { "id": "f-sql-u-id", "name": "id", "type": "INT", "primaryKey": true, "autoIncrement": true },
+          { "id": "f-sql-u-email", "name": "email", "type": "VARCHAR", "typeParams": "255", "unique": true, "nullable": false },
+          { "id": "f-sql-u-status", "name": "status", "type": "ENUM", "enumValues": ["active", "inactive"], "defaultValue": "active" },
+          { "id": "f-sql-u-created", "name": "created_at", "type": "TIMESTAMP", "defaultValue": "CURRENT_TIMESTAMP" }
+        ]
+      }
+    },
+    {
+      "id": "col-mysql-orders",
+      "databaseId": "db-mysql",
+      "type": "collection",
+      "position": { "x": 560, "y": 320 },
+      "data": {
+        "label": "orders",
+        "fields": [
+          { "id": "f-sql-o-id", "name": "id", "type": "INT", "primaryKey": true, "autoIncrement": true },
+          {
+            "id": "f-sql-o-user-id",
+            "name": "user_id",
+            "type": "INT",
+            "nullable": false,
+            "index": true,
+            "indexName": "idx_orders_user_id",
+            "foreignKey": true,
+            "referencesTable": "users",
+            "referencesColumnId": "f-sql-u-id",
+            "referencesColumn": "id",
+            "fkConstraintName": "fk_orders_users",
+            "onDelete": "CASCADE",
+            "onUpdate": "CASCADE"
+          },
+          {
+            "id": "f-sql-o-total",
+            "name": "total_amount",
+            "type": "DECIMAL",
+            "typeParams": "10,2",
+            "nullable": false,
+            "checkExpression": "total_amount >= 0",
+            "checkConstraintName": "chk_orders_total_non_negative"
+          },
+          { "id": "f-sql-o-note", "name": "note", "type": "TEXT", "nullable": true }
+        ]
+      }
+    },
+
+    {
+      "id": "col-pg-customers",
+      "databaseId": "db-pg",
+      "type": "collection",
+      "position": { "x": 160, "y": 560 },
+      "data": {
+        "label": "customers",
+        "fields": [
+          { "id": "f-pg-c-id", "name": "id", "type": "UUID", "primaryKey": true, "defaultValue": "gen_random_uuid()" },
+          { "id": "f-pg-c-email", "name": "email", "type": "VARCHAR", "typeParams": "255", "unique": true, "nullable": false },
+          { "id": "f-pg-c-meta", "name": "metadata", "type": "JSONB", "nullable": true }
+        ]
+      }
+    },
+    {
+      "id": "col-pg-invoices",
+      "databaseId": "db-pg",
+      "type": "collection",
+      "position": { "x": 560, "y": 560 },
+      "data": {
+        "label": "invoices",
+        "fields": [
+          { "id": "f-pg-i-id", "name": "id", "type": "BIGSERIAL", "primaryKey": true },
+          {
+            "id": "f-pg-i-customer-id",
+            "name": "customer_id",
+            "type": "UUID",
+            "nullable": false,
+            "foreignKey": true,
+            "referencesTable": "customers",
+            "referencesColumnId": "f-pg-c-id",
+            "referencesColumn": "id",
+            "fkConstraintName": "fk_invoices_customers",
+            "onDelete": "RESTRICT",
+            "onUpdate": "CASCADE"
+          },
+          {
+            "id": "f-pg-i-total",
+            "name": "total",
+            "type": "DECIMAL",
+            "typeParams": "12,2",
+            "nullable": false,
+            "checkExpression": "total > 0"
+          },
+          { "id": "f-pg-i-issued", "name": "issued_at", "type": "TIMESTAMP", "defaultValue": "CURRENT_TIMESTAMP" }
+        ]
+      }
+    }
+  ],
+  "edges": [
+    {
+      "id": "e-mongo-users-posts",
+      "databaseId": "db-mongo",
+      "source": "col-mongo-users",
+      "target": "col-mongo-posts",
+      "sourceHandle": "f-mu-id",
+      "targetHandle": "f-mp-author",
+      "animated": false,
+      "style": { "stroke": "#fbbf24", "strokeWidth": 2, "strokeDasharray": "7 5" }
+    },
+    {
+      "id": "e-mysql-users-orders",
+      "databaseId": "db-mysql",
+      "source": "col-mysql-users",
+      "target": "col-mysql-orders",
+      "sourceHandle": "f-sql-u-id",
+      "targetHandle": "f-sql-o-user-id",
+      "animated": false,
+      "style": { "stroke": "#60a5fa", "strokeWidth": 2, "strokeDasharray": "7 5" }
+    },
+    {
+      "id": "e-pg-customers-invoices",
+      "databaseId": "db-pg",
+      "source": "col-pg-customers",
+      "target": "col-pg-invoices",
+      "sourceHandle": "f-pg-c-id",
+      "targetHandle": "f-pg-i-customer-id",
+      "animated": false,
+      "style": { "stroke": "#60a5fa", "strokeWidth": 2, "strokeDasharray": "7 5" }
+    }
+  ]
+}

@@ -1,6 +1,8 @@
 <script setup>
-import { onMounted, onUnmounted, ref } from 'vue'
+import { computed, onMounted, onUnmounted, ref } from 'vue'
 import { Trash2, Copy, X } from 'lucide-vue-next'
+import { useSchemaStore } from '../stores/schemaStore'
+import { getDatabaseEntityTerms } from '../factories/databaseFactory'
 
 const props = defineProps({
   x: { type: Number, required: true },
@@ -12,6 +14,8 @@ const props = defineProps({
 const emit = defineEmits(['close', 'delete', 'duplicate'])
 
 const menuRef = ref(null)
+const store = useSchemaStore()
+const entityTerms = computed(() => getDatabaseEntityTerms(store.activeDatabaseType))
 
 const handleClickOutside = (event) => {
   if (menuRef.value && !menuRef.value.contains(event.target)) {
@@ -45,7 +49,7 @@ onUnmounted(() => {
       :style="{ top: `${y}px`, left: `${x}px` }"
     >
       <div v-if="type === 'collection'" class="px-2 py-1 text-xs font-bold text-gray-500 uppercase border-b border-gray-700 mb-1">
-        Collection Actions
+        {{ entityTerms.singular }} Actions
       </div>
       <div v-else-if="type === 'edge'" class="px-2 py-1 text-xs font-bold text-gray-500 uppercase border-b border-gray-700 mb-1">
         Relation Actions
@@ -61,7 +65,7 @@ onUnmounted(() => {
         class="w-full text-left px-3 py-2 hover:bg-[#2a2a2a] text-emerald-400 hover:text-emerald-300 flex items-center gap-2 transition-colors"
       >
         <Copy :size="14" />
-        Create Collection
+        Create {{ entityTerms.singular }}
       </button>
 
       <button 

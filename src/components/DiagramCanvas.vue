@@ -6,6 +6,7 @@ import { Controls } from '@vue-flow/controls'
 import { useSchemaStore } from '../stores/schemaStore'
 import CollectionNode from './nodes/CollectionNode.vue'
 import ContextMenu from './ContextMenu.vue'
+import { createDatabaseAdapter, getNextDefaultEntityName } from '../factories/databaseFactory'
 
 const store = useSchemaStore()
 const {
@@ -161,15 +162,19 @@ const handleMenuAction = (action, id) => {
   } else if (action === 'create') {
     const { x, y } = project({ x: menu.value.x, y: menu.value.y })
     const newId = `col-${Date.now()}`
+    const adapter = createDatabaseAdapter(store.activeDatabaseType)
+    const defaultField = { ...adapter.getDefaultField(), id: `f-${Date.now()}-1` }
+    const nextEntityName = getNextDefaultEntityName(
+      store.activeDatabaseType,
+      store.activeCollections.map((collection) => collection?.data?.label)
+    )
     const newCollection = {
       id: newId,
       type: 'collection',
       position: { x, y },
       data: {
-        label: 'New Collection',
-        fields: [
-          { id: `f-${Date.now()}-1`, name: '_id', type: 'ObjectId', key: true }
-        ]
+        label: nextEntityName,
+        fields: [defaultField]
       }
     }
     store.addCollection(newCollection)

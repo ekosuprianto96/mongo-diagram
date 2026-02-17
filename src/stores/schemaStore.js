@@ -1,6 +1,7 @@
 import { defineStore } from 'pinia'
 import { useStorage } from '@vueuse/core'
 import { useUiStore } from './uiStore'
+import { DB_TYPES } from '../constants/dbTypes'
 
 const STORAGE_KEY = 'mongo-architect-schema'
 let hasShownStorageFullAlert = false
@@ -345,10 +346,83 @@ const schemaOptionsToCode = (optionsObj) => {
         : ''
 }
 
-const isValidProjectPayload = (payload) => {
-    return payload &&
-        Array.isArray(payload.collections) &&
-        Array.isArray(payload.edges)
+const PROJECT_SCHEMA_VERSION = 1
+const VALID_DATABASE_TYPES = new Set(Object.values(DB_TYPES))
+
+const isObject = (value) => value !== null && typeof value === 'object' && !Array.isArray(value)
+
+const sanitizeCollectionsForExport = (collections = []) => {
+    return collections.map((collection) => {
+        const cloned = JSON.parse(JSON.stringify(collection))
+        delete cloned.selected
+        return cloned
+    })
+}
+
+const sanitizeEdgesForExport = (edges = []) => {
+    return edges.map((edge) => {
+        const cloned = JSON.parse(JSON.stringify(edge))
+        delete cloned.selected
+        return cloned
+    })
+}
+
+const validateProjectPayload = (payload) => {
+    if (!isObject(payload)) {
+        return { ok: false, message: 'Invalid project file structure: root must be an object.' }
+    }
+
+    if (!Array.isArray(payload.databases) || payload.databases.length === 0) {
+        return { ok: false, message: 'Invalid project file structure: databases is required and must be a non-empty array.' }
+    }
+
+    if (!Array.isArray(payload.collections) || !Array.isArray(payload.edges)) {
+        return { ok: false, message: 'Invalid project file structure: collections and edges must be arrays.' }
+    }
+
+    const databaseIds = new Set()
+    for (const database of payload.databases) {
+        if (!isObject(database) || typeof database.id !== 'string' || !database.id.trim()) {
+            return { ok: false, message: 'Invalid project file structure: each database must have a valid id.' }
+        }
+        if (typeof database.name !== 'string' || !database.name.trim()) {
+            return { ok: false, message: 'Invalid project file structure: each database must have a valid name.' }
+        }
+        if (database.type && !VALID_DATABASE_TYPES.has(database.type)) {
+            return { ok: false, message: `Invalid database type "${database.type}".` }
+        }
+        databaseIds.add(database.id)
+    }
+
+    if (payload.activeDatabaseId && !databaseIds.has(payload.activeDatabaseId)) {
+        return { ok: false, message: 'Invalid project file structure: activeDatabaseId must exist in databases.' }
+    }
+
+    for (const collection of payload.collections) {
+        if (!isObject(collection) || typeof collection.id !== 'string' || !collection.id.trim()) {
+            return { ok: false, message: 'Invalid project file structure: each collection must have a valid id.' }
+        }
+        if (!isObject(collection.data) || !Array.isArray(collection.data.fields)) {
+            return { ok: false, message: 'Invalid project file structure: each collection must include data.fields array.' }
+        }
+        if (collection.databaseId && !databaseIds.has(collection.databaseId)) {
+            return { ok: false, message: `Invalid project file structure: collection "${collection.id}" references unknown databaseId.` }
+        }
+    }
+
+    for (const edge of payload.edges) {
+        if (!isObject(edge) || typeof edge.id !== 'string' || !edge.id.trim()) {
+            return { ok: false, message: 'Invalid project file structure: each edge must have a valid id.' }
+        }
+        if (typeof edge.source !== 'string' || typeof edge.target !== 'string') {
+            return { ok: false, message: `Invalid project file structure: edge "${edge.id}" must include source and target.` }
+        }
+        if (edge.databaseId && !databaseIds.has(edge.databaseId)) {
+            return { ok: false, message: `Invalid project file structure: edge "${edge.id}" references unknown databaseId.` }
+        }
+    }
+
+    return { ok: true }
 }
 
 export const useSchemaStore = defineStore('schema', {
@@ -444,18 +518,22 @@ export const useSchemaStore = defineStore('schema', {
             code += `const ${col.data.label} = mongoose.model('${col.data.label}', ${col.data.label}Schema);\n\n`;
             return code;
         },
+        activeDatabaseType: (state) => {
+            const db = state.databases.find((db) => db.id === state.activeDatabaseId)
+            return db?.type || DB_TYPES.MONGODB
+        },
         mongooseSchemaCode: (state) => {
             let code = "const mongoose = require('mongoose');\nconst { Schema } = mongoose;\n\n";
             state.collections
                 .filter((col) => col.databaseId === state.activeDatabaseId)
                 .forEach(col => {
-                const optionsStr = schemaOptionsToCode(buildSchemaOptions(col.data))
+                    const optionsStr = schemaOptionsToCode(buildSchemaOptions(col.data))
 
-                code += `const ${col.data.label}Schema = new Schema({\n`;
-                code += generateSchemaCode(col.data.fields);
-                code += `}${optionsStr});\n\n`;
-                code += `const ${col.data.label} = mongoose.model('${col.data.label}', ${col.data.label}Schema);\n\n`;
-            });
+                    code += `const ${col.data.label}Schema = new Schema({\n`;
+                    code += generateSchemaCode(col.data.fields);
+                    code += `}${optionsStr});\n\n`;
+                    code += `const ${col.data.label} = mongoose.model('${col.data.label}', ${col.data.label}Schema);\n\n`;
+                });
             return code;
         },
         getCollectionsCode: (state) => (ids = []) => {
@@ -541,6 +619,11 @@ export const useSchemaStore = defineStore('schema', {
                 }
             })
 
+            // Ensure all databases have a type, default to MongoDB for backward compatibility
+            this.databases.forEach(db => {
+                if (!db.type) db.type = DB_TYPES.MONGODB
+            })
+
             this.edges.forEach((edge) => {
                 if (!edge.databaseId || !knownDbIds.has(edge.databaseId)) {
                     const sourceCollection = this.collections.find((collection) => collection.id === edge.source)
@@ -551,9 +634,9 @@ export const useSchemaStore = defineStore('schema', {
             this.pruneInvalidEdges()
             this.persistState()
         },
-        addDatabase(name = 'New Database') {
+        addDatabase(name = 'New Database', type = DB_TYPES.MONGODB) {
             const id = `db-${Date.now()}`
-            this.databases.push({ id, name: String(name).trim() || 'New Database' })
+            this.databases.push({ id, name: String(name).trim() || 'New Database', type })
             this.activeDatabaseId = id
             this.clearSelections()
             return id
@@ -715,12 +798,12 @@ export const useSchemaStore = defineStore('schema', {
         },
         exportProject() {
             return JSON.stringify({
-                version: 1,
+                version: PROJECT_SCHEMA_VERSION,
                 exportedAt: new Date().toISOString(),
                 databases: this.databases,
                 activeDatabaseId: this.activeDatabaseId,
-                collections: this.collections,
-                edges: this.edges,
+                collections: sanitizeCollectionsForExport(this.collections),
+                edges: sanitizeEdgesForExport(this.edges),
             }, null, 2)
         },
         importProject(rawPayload) {
@@ -731,8 +814,9 @@ export const useSchemaStore = defineStore('schema', {
                 return { success: false, message: 'Invalid JSON format.' }
             }
 
-            if (!isValidProjectPayload(parsed)) {
-                return { success: false, message: 'Invalid project file structure.' }
+            const validation = validateProjectPayload(parsed)
+            if (!validation.ok) {
+                return { success: false, message: validation.message || 'Invalid project file structure.' }
             }
 
             this.recordHistory()

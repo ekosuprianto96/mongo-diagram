@@ -3,6 +3,7 @@ import { computed, onMounted, onUnmounted, ref } from 'vue'
 import { Handle, Position } from '@vue-flow/core'
 import { Plus, GripVertical } from 'lucide-vue-next'
 import { useSchemaStore } from '../../stores/schemaStore'
+import { getDefaultNewFieldType } from '../../factories/databaseFactory'
 
 const props = defineProps({
   field: Object,
@@ -77,10 +78,11 @@ const selectField = () => {
 
 const addChildField = () => {
     const newId = `f-${Date.now()}`
+    const defaultType = getDefaultNewFieldType(store.activeDatabaseType)
     store.addChildField(props.collectionId, props.field.id, {
         id: newId, 
         name: 'childField', 
-        type: 'String' 
+        type: defaultType,
     })
     store.selectItem(newId, 'field', props.collectionId)
 }

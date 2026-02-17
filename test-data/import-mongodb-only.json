@@ -1,0 +1,51 @@
+{
+  "version": 1,
+  "exportedAt": "2026-02-17T10:00:00.000Z",
+  "databases": [
+    { "id": "db-mongo", "name": "mongo_blog", "type": "MongoDB" }
+  ],
+  "activeDatabaseId": "db-mongo",
+  "collections": [
+    {
+      "id": "col-users",
+      "databaseId": "db-mongo",
+      "type": "collection",
+      "position": { "x": 180, "y": 120 },
+      "data": {
+        "label": "users",
+        "timestampsEnabled": true,
+        "fields": [
+          { "id": "f-users-id", "name": "_id", "type": "ObjectId", "key": true },
+          { "id": "f-users-name", "name": "name", "type": "String", "required": true },
+          { "id": "f-users-email", "name": "email", "type": "String", "required": true, "unique": true, "lowercase": true }
+        ]
+      }
+    },
+    {
+      "id": "col-posts",
+      "databaseId": "db-mongo",
+      "type": "collection",
+      "position": { "x": 560, "y": 120 },
+      "data": {
+        "label": "posts",
+        "fields": [
+          { "id": "f-posts-id", "name": "_id", "type": "ObjectId", "key": true },
+          { "id": "f-posts-title", "name": "title", "type": "String", "required": true },
+          { "id": "f-posts-author", "name": "author_id", "type": "ObjectId", "ref": "users" }
+        ]
+      }
+    }
+  ],
+  "edges": [
+    {
+      "id": "e-users-posts",
+      "databaseId": "db-mongo",
+      "source": "col-users",
+      "target": "col-posts",
+      "sourceHandle": "f-users-id",
+      "targetHandle": "f-posts-author",
+      "animated": false,
+      "style": { "stroke": "#fbbf24", "strokeWidth": 2, "strokeDasharray": "7 5" }
+    }
+  ]
+}

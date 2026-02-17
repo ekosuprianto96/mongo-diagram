@@ -1,0 +1,67 @@
+{
+  "version": 1,
+  "exportedAt": "2026-02-17T10:00:00.000Z",
+  "databases": [
+    { "id": "db-pg", "name": "pg_finance", "type": "PostgreSQL" }
+  ],
+  "activeDatabaseId": "db-pg",
+  "collections": [
+    {
+      "id": "col-customers",
+      "databaseId": "db-pg",
+      "type": "collection",
+      "position": { "x": 220, "y": 220 },
+      "data": {
+        "label": "customers",
+        "fields": [
+          { "id": "f-customers-id", "name": "id", "type": "UUID", "primaryKey": true, "defaultValue": "gen_random_uuid()" },
+          { "id": "f-customers-email", "name": "email", "type": "VARCHAR", "typeParams": "255", "unique": true, "nullable": false }
+        ]
+      }
+    },
+    {
+      "id": "col-payments",
+      "databaseId": "db-pg",
+      "type": "collection",
+      "position": { "x": 600, "y": 220 },
+      "data": {
+        "label": "payments",
+        "fields": [
+          { "id": "f-payments-id", "name": "id", "type": "BIGSERIAL", "primaryKey": true },
+          {
+            "id": "f-payments-customer-id",
+            "name": "customer_id",
+            "type": "UUID",
+            "nullable": false,
+            "foreignKey": true,
+            "referencesTable": "customers",
+            "referencesColumnId": "f-customers-id",
+            "referencesColumn": "id",
+            "onDelete": "RESTRICT",
+            "onUpdate": "CASCADE"
+          },
+          {
+            "id": "f-payments-amount",
+            "name": "amount",
+            "type": "DECIMAL",
+            "typeParams": "12,2",
+            "nullable": false,
+            "checkExpression": "amount > 0"
+          }
+        ]
+      }
+    }
+  ],
+  "edges": [
+    {
+      "id": "e-customers-payments",
+      "databaseId": "db-pg",
+      "source": "col-customers",
+      "target": "col-payments",
+      "sourceHandle": "f-customers-id",
+      "targetHandle": "f-payments-customer-id",
+      "animated": false,
+      "style": { "stroke": "#60a5fa", "strokeWidth": 2, "strokeDasharray": "7 5" }
+    }
+  ]
+}

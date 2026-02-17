@@ -1,8 +1,9 @@
 <script setup>
-import { computed, ref, watch, onMounted, onUnmounted } from 'vue'
+import { computed, ref, watch, onUnmounted } from 'vue'
 import { useSchemaStore } from '../stores/schemaStore'
 import { useUiStore } from '../stores/uiStore'
 import { X, Copy } from 'lucide-vue-next'
+import { createDatabaseAdapter } from '../factories/databaseFactory'
 
 const props = defineProps({
     isOpen: Boolean,
@@ -19,17 +20,35 @@ const emit = defineEmits(['close'])
 
 const store = useSchemaStore()
 const ui = useUiStore()
-const code = computed(() => {
+const adapter = computed(() => createDatabaseAdapter(store.activeDatabaseType))
+
+const resolveTargetCollections = () => {
+    const activeDbId = store.activeDatabaseId
+    const activeCollections = store.collections.filter((collection) => collection.databaseId === activeDbId)
+
     if (props.collectionIds.length > 0) {
-        return store.getCollectionsCode(props.collectionIds)
+        const ids = new Set(props.collectionIds)
+        return activeCollections.filter((collection) => ids.has(collection.id))
     }
+
     if (props.collectionId) {
-        return store.getCollectionCode(props.collectionId)
+        return activeCollections.filter((collection) => collection.id === props.collectionId)
     }
-    return store.mongooseSchemaCode
+
+    return activeCollections
+}
+
+const code = computed(() => {
+    return adapter.value.generateCode({
+        store,
+        collectionId: props.collectionId,
+        collectionIds: props.collectionIds,
+        collections: resolveTargetCollections(),
+    })
 })
 const editorContainer = ref(null)
 const isLoading = ref(true)
+const language = computed(() => adapter.value.getLanguage())
 let editorInstance = null
 
 const copyToClipboard = async () => {
@@ -58,7 +77,7 @@ const initMonaco = () => {
 
             editorInstance = monaco.editor.create(editorContainer.value, {
                 value: code.value,
-                language: 'javascript',
+                language: language.value,
                 theme: 'vs-dark',
                 readOnly: true,
                 minimap: { enabled: false },
@@ -121,6 +140,7 @@ watch(() => props.isOpen, (newVal) => {
 watch(code, (newCode) => {
     if (editorInstance) {
         editorInstance.setValue(newCode)
+        monaco.editor.setModelLanguage(editorInstance.getModel(), language.value)
     }
 })
 

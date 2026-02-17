@@ -4,6 +4,9 @@ import { useSchemaStore } from '../stores/schemaStore'
 import { useUiStore } from '../stores/uiStore'
 import { Trash2, AlertCircle } from 'lucide-vue-next'
 
+import { DB_TYPES, FIELD_TYPES } from '../constants/dbTypes'
+import { getDatabaseEntityTerms } from '../factories/databaseFactory'
+
 const store = useSchemaStore()
 const ui = useUiStore()
 
@@ -11,11 +14,11 @@ const selectedItem = computed(() => store.selectedItem)
 const isCollection = computed(() => store.selectedItemType === 'collection')
 const isField = computed(() => store.selectedItemType === 'field')
 const isEdge = computed(() => store.selectedItemType === 'edge')
+const activeDbType = computed(() => store.activeDatabaseType)
+const entityTerms = computed(() => getDatabaseEntityTerms(activeDbType.value))
 
 // Field Types
-const fieldTypes = [
-  'String', 'Number', 'ObjectId', 'Date', 'Boolean', 'Array', 'Object', 'Map', 'Buffer', 'Mixed'
-]
+const currentFieldTypes = computed(() => FIELD_TYPES[activeDbType.value] || [])
 const triStateOptions = [
   { value: '', label: 'Default' },
   { value: 'true', label: 'True' },
@@ -42,6 +45,21 @@ const collationCaseFirstOptions = [
   { value: 'off', label: 'off' },
 ]
 const mapArrayTypeOptions = ['String', 'Number', 'Boolean', 'Date', 'ObjectId', 'Object', 'Mixed']
+const sqlReferentialActionOptions = [
+  { value: '', label: 'No Action' },
+  { value: 'CASCADE', label: 'CASCADE' },
+  { value: 'RESTRICT', label: 'RESTRICT' },
+  { value: 'SET NULL', label: 'SET NULL' },
+  { value: 'NO ACTION', label: 'NO ACTION' },
+]
+
+const referenceTableOptions = computed(() => store.activeCollections || [])
+const selectedReferenceTable = computed(() => {
+    if (!isField.value || activeDbType.value === DB_TYPES.MONGODB) return null
+    const tableName = String(selectedItem.value?.referencesTable || '')
+    return referenceTableOptions.value.find((collection) => collection.data?.label === tableName) || null
+})
+const referenceFieldOptions = computed(() => selectedReferenceTable.value?.data?.fields || [])
 
 const updateCollectionOption = (key, value) => {
     store.updateCollectionProps(store.selectedItemId, { [key]: value })
@@ -50,6 +68,18 @@ const updateCollectionOption = (key, value) => {
 const updateFieldOption = (key, value) => {
     if (!isField.value) return
     store.updateFieldProps(store.selectedCollectionId, store.selectedItemId, { [key]: value })
+}
+
+const handleReferenceTableChange = (value) => {
+    updateFieldOption('referencesTable', value)
+    updateFieldOption('referencesColumnId', '')
+    updateFieldOption('referencesColumn', '')
+}
+
+const handleReferenceColumnChange = (fieldId) => {
+    updateFieldOption('referencesColumnId', fieldId)
+    const targetField = referenceFieldOptions.value.find((field) => field.id === fieldId)
+    updateFieldOption('referencesColumn', targetField?.name || '')
 }
 
 const getEnumValues = () => {
@@ -114,7 +144,7 @@ const deleteItem = async () => {
 
     if (isCollection.value) {
         store.removeCollection(store.selectedItemId)
-        ui.showToast('Collection deleted.', 'success')
+        ui.showToast(`${entityTerms.value.singular} deleted.`, 'success')
     } else if (isField.value) {
         store.removeField(store.selectedCollectionId, store.selectedItemId)
         ui.showToast('Field deleted.', 'success')
@@ -135,7 +165,7 @@ const deleteItem = async () => {
     <!-- Empty State -->
     <div v-if="!selectedItem && !isEdge" class="flex-1 flex flex-col items-center justify-center text-gray-500 p-8 text-center">
       <AlertCircle :size="48" class="mb-4 opacity-50" />
-      <p class="text-sm">Select a collection, field, or relationship to edit properties</p>
+      <p class="text-sm">Select a {{ entityTerms.singularLower }}, field, or relationship to edit properties</p>
     </div>
 
     <!-- Edge Editor -->
@@ -156,7 +186,7 @@ const deleteItem = async () => {
     <!-- Collection Editor -->
     <div v-else-if="isCollection" class="p-4 space-y-6">
         <div>
-            <label class="block text-xs font-bold text-gray-500 uppercase mb-2">Collection Name</label>
+            <label class="block text-xs font-bold text-gray-500 uppercase mb-2">{{ entityTerms.singular }} Name</label>
             <input 
                 :value="selectedItem.data.label" 
                 @input="updateLabel"
@@ -165,8 +195,8 @@ const deleteItem = async () => {
             />
         </div>
 
-        <!-- Schema Options -->
-        <div class="space-y-3">
+        <!-- Schema Options (MongoDB Only) -->
+        <div v-if="activeDbType === DB_TYPES.MONGODB" class="space-y-3">
              <label class="block text-xs font-bold text-gray-500 uppercase">Schema Options</label>
              
              <!-- Timestamps Toggle -->
@@ -208,7 +238,9 @@ const deleteItem = async () => {
              </div>
         </div>
 
-        <div class="space-y-3">
+
+
+        <div v-if="activeDbType === DB_TYPES.MONGODB" class="space-y-3">
             <label class="block text-xs font-bold text-gray-500 uppercase">Advanced Schema Options</label>
 
             <div>
@@ -351,7 +383,7 @@ const deleteItem = async () => {
         <div class="pt-4 border-t border-gray-700">
              <button @click="deleteItem" class="w-full flex items-center justify-center gap-2 px-4 py-2 bg-red-900/30 hover:bg-red-900/50 text-red-500 border border-red-900/50 rounded transition-colors text-sm">
                 <Trash2 :size="16" />
-                Delete Collection
+                Delete {{ entityTerms.singular }}
             </button>
         </div>
     </div>
@@ -375,14 +407,15 @@ const deleteItem = async () => {
                 @change="updateType"
                 class="w-full bg-[#2a2a2a] border border-gray-600 rounded px-3 py-2 text-white text-sm focus:border-emerald-500 focus:outline-none transition-colors appearance-none"
             >
-                <option v-for="t in fieldTypes" :key="t" :value="t">{{ t }}</option>
+                <option v-for="t in currentFieldTypes" :key="t" :value="t">{{ t }}</option>
             </select>
         </div>
 
         <div class="space-y-3">
-            <label class="block text-xs font-bold text-gray-500 uppercase">Common Options</label>
+            <label class="block text-xs font-bold text-gray-500 uppercase">Field Options</label>
 
-            <div class="grid grid-cols-2 gap-2">
+            <!-- MongoDB Specific -->
+            <div v-if="activeDbType === DB_TYPES.MONGODB" class="grid grid-cols-2 gap-2">
                 <div class="flex items-center justify-between p-2 bg-[#2a2a2a] rounded">
                     <span class="text-sm text-gray-300">Required</span>
                     <button @click="toggleProp('required')" class="w-10 h-5 rounded-full relative transition-colors" :class="selectedItem.required ? 'bg-emerald-500' : 'bg-gray-600'">
@@ -415,7 +448,47 @@ const deleteItem = async () => {
                 </div>
             </div>
 
-            <div class="grid grid-cols-2 gap-2">
+            <!-- SQL Specific -->
+            <div v-else class="grid grid-cols-2 gap-2">
+                 <div class="flex items-center justify-between p-2 bg-[#2a2a2a] rounded">
+                    <span class="text-sm text-gray-300">Primary Key</span>
+                    <button @click="toggleProp('primaryKey')" class="w-10 h-5 rounded-full relative transition-colors" :class="selectedItem.primaryKey ? 'bg-emerald-500' : 'bg-gray-600'">
+                        <div class="absolute top-1 left-1 bg-white w-3 h-3 rounded-full transition-transform" :class="selectedItem.primaryKey ? 'translate-x-5' : ''"></div>
+                    </button>
+                </div>
+                 <div class="flex items-center justify-between p-2 bg-[#2a2a2a] rounded">
+                    <span class="text-sm text-gray-300">Auto Increment</span>
+                    <button @click="toggleProp('autoIncrement')" class="w-10 h-5 rounded-full relative transition-colors" :class="selectedItem.autoIncrement ? 'bg-emerald-500' : 'bg-gray-600'">
+                        <div class="absolute top-1 left-1 bg-white w-3 h-3 rounded-full transition-transform" :class="selectedItem.autoIncrement ? 'translate-x-5' : ''"></div>
+                    </button>
+                </div>
+                 <div class="flex items-center justify-between p-2 bg-[#2a2a2a] rounded">
+                    <span class="text-sm text-gray-300">Nullable</span>
+                    <button @click="toggleProp('nullable')" class="w-10 h-5 rounded-full relative transition-colors" :class="selectedItem.nullable ? 'bg-emerald-500' : 'bg-gray-600'">
+                        <div class="absolute top-1 left-1 bg-white w-3 h-3 rounded-full transition-transform" :class="selectedItem.nullable ? 'translate-x-5' : ''"></div>
+                    </button>
+                </div>
+                <div class="flex items-center justify-between p-2 bg-[#2a2a2a] rounded">
+                    <span class="text-sm text-gray-300">Unique</span>
+                    <button @click="toggleProp('unique')" class="w-10 h-5 rounded-full relative transition-colors" :class="selectedItem.unique ? 'bg-emerald-500' : 'bg-gray-600'">
+                        <div class="absolute top-1 left-1 bg-white w-3 h-3 rounded-full transition-transform" :class="selectedItem.unique ? 'translate-x-5' : ''"></div>
+                    </button>
+                </div>
+                 <div class="flex items-center justify-between p-2 bg-[#2a2a2a] rounded">
+                    <span class="text-sm text-gray-300">Index</span>
+                    <button @click="toggleProp('index')" class="w-10 h-5 rounded-full relative transition-colors" :class="selectedItem.index ? 'bg-emerald-500' : 'bg-gray-600'">
+                        <div class="absolute top-1 left-1 bg-white w-3 h-3 rounded-full transition-transform" :class="selectedItem.index ? 'translate-x-5' : ''"></div>
+                    </button>
+                </div>
+                 <div class="flex items-center justify-between p-2 bg-[#2a2a2a] rounded">
+                    <span class="text-sm text-gray-300">Unsigned</span>
+                    <button @click="toggleProp('unsigned')" class="w-10 h-5 rounded-full relative transition-colors" :class="selectedItem.unsigned ? 'bg-emerald-500' : 'bg-gray-600'">
+                        <div class="absolute top-1 left-1 bg-white w-3 h-3 rounded-full transition-transform" :class="selectedItem.unsigned ? 'translate-x-5' : ''"></div>
+                    </button>
+                </div>
+            </div>
+
+            <div class="grid grid-cols-2 gap-2" v-if="activeDbType === DB_TYPES.MONGODB">
                 <div>
                     <label class="block text-[10px] text-gray-400 uppercase mb-1">Alias</label>
                     <input :value="selectedItem.alias || ''" @input="(e) => updateFieldOption('alias', e.target.value)" class="w-full bg-[#2a2a2a] border border-gray-600 rounded px-2 py-1 text-white text-xs" type="text" placeholder="optional alias" />
@@ -427,9 +500,69 @@ const deleteItem = async () => {
                     </select>
                 </div>
             </div>
+
+            <div v-else>
+                 <label class="block text-[10px] text-gray-400 uppercase mb-1">Default Value</label>
+                 <input :value="selectedItem.defaultValue || ''" @input="(e) => updateFieldOption('defaultValue', e.target.value)" class="w-full bg-[#2a2a2a] border border-gray-600 rounded px-2 py-1 text-white text-xs" type="text" placeholder="default value" />
+            </div>
         </div>
 
-        <div v-if="selectedItem.type === 'String'" class="space-y-3">
+        <div v-if="activeDbType !== DB_TYPES.MONGODB" class="space-y-3">
+            <label class="block text-xs font-bold text-gray-500 uppercase">SQL Constraints</label>
+
+            <div class="flex items-center justify-between p-2 bg-[#2a2a2a] rounded">
+                <span class="text-sm text-gray-300">Foreign Key</span>
+                <button @click="toggleProp('foreignKey')" class="w-10 h-5 rounded-full relative transition-colors" :class="selectedItem.foreignKey ? 'bg-emerald-500' : 'bg-gray-600'">
+                    <div class="absolute top-1 left-1 bg-white w-3 h-3 rounded-full transition-transform" :class="selectedItem.foreignKey ? 'translate-x-5' : ''"></div>
+                </button>
+            </div>
+
+            <div v-if="selectedItem.foreignKey" class="grid grid-cols-2 gap-2">
+                <div>
+                    <label class="block text-[10px] text-gray-400 uppercase mb-1">Reference Table</label>
+                    <select :value="selectedItem.referencesTable || ''" @change="(e) => handleReferenceTableChange(e.target.value)" class="w-full bg-[#2a2a2a] border border-gray-600 rounded px-2 py-1 text-white text-xs">
+                        <option value="">Select table...</option>
+                        <option v-for="table in referenceTableOptions" :key="table.id" :value="table.data.label">{{ table.data.label }}</option>
+                    </select>
+                </div>
+                <div>
+                    <label class="block text-[10px] text-gray-400 uppercase mb-1">Reference Column</label>
+                    <select :value="selectedItem.referencesColumnId || ''" @change="(e) => handleReferenceColumnChange(e.target.value)" class="w-full bg-[#2a2a2a] border border-gray-600 rounded px-2 py-1 text-white text-xs">
+                        <option value="">Select column...</option>
+                        <option v-for="field in referenceFieldOptions" :key="field.id" :value="field.id">{{ field.name }}</option>
+                    </select>
+                </div>
+                <div>
+                    <label class="block text-[10px] text-gray-400 uppercase mb-1">FK Constraint Name</label>
+                    <input :value="selectedItem.fkConstraintName || ''" @input="(e) => updateFieldOption('fkConstraintName', e.target.value)" class="w-full bg-[#2a2a2a] border border-gray-600 rounded px-2 py-1 text-white text-xs" type="text" placeholder="optional" />
+                </div>
+                <div>
+                    <label class="block text-[10px] text-gray-400 uppercase mb-1">On Delete</label>
+                    <select :value="selectedItem.onDelete || ''" @change="(e) => updateFieldOption('onDelete', e.target.value)" class="w-full bg-[#2a2a2a] border border-gray-600 rounded px-2 py-1 text-white text-xs">
+                        <option v-for="option in sqlReferentialActionOptions" :key="`on-delete-${option.value}`" :value="option.value">{{ option.label }}</option>
+                    </select>
+                </div>
+                <div>
+                    <label class="block text-[10px] text-gray-400 uppercase mb-1">On Update</label>
+                    <select :value="selectedItem.onUpdate || ''" @change="(e) => updateFieldOption('onUpdate', e.target.value)" class="w-full bg-[#2a2a2a] border border-gray-600 rounded px-2 py-1 text-white text-xs">
+                        <option v-for="option in sqlReferentialActionOptions" :key="`on-update-${option.value}`" :value="option.value">{{ option.label }}</option>
+                    </select>
+                </div>
+            </div>
+
+            <div class="space-y-2">
+                <label class="block text-[10px] text-gray-400 uppercase mb-1">Check Constraint Expression</label>
+                <input :value="selectedItem.checkExpression || ''" @input="(e) => updateFieldOption('checkExpression', e.target.value)" class="w-full bg-[#2a2a2a] border border-gray-600 rounded px-2 py-1 text-white text-xs" type="text" placeholder="e.g. amount > 0" />
+                <input :value="selectedItem.checkConstraintName || ''" @input="(e) => updateFieldOption('checkConstraintName', e.target.value)" class="w-full bg-[#2a2a2a] border border-gray-600 rounded px-2 py-1 text-white text-xs" type="text" placeholder="check constraint name (optional)" />
+            </div>
+
+            <div v-if="selectedItem.index" class="space-y-1">
+                <label class="block text-[10px] text-gray-400 uppercase mb-1">Index Name</label>
+                <input :value="selectedItem.indexName || ''" @input="(e) => updateFieldOption('indexName', e.target.value)" class="w-full bg-[#2a2a2a] border border-gray-600 rounded px-2 py-1 text-white text-xs" type="text" placeholder="optional" />
+            </div>
+        </div>
+
+        <div v-if="selectedItem.type === 'String' && activeDbType === DB_TYPES.MONGODB" class="space-y-3">
             <label class="block text-xs font-bold text-gray-500 uppercase">String Options</label>
             <div class="grid grid-cols-3 gap-2">
                 <div class="flex items-center justify-between p-2 bg-[#2a2a2a] rounded">
@@ -475,7 +608,25 @@ const deleteItem = async () => {
             </div>
         </div>
 
-        <div v-if="selectedItem.type === 'Number'" class="space-y-3">
+        <!-- MySQL ENUM Reuse -->
+        <div v-if="selectedItem.type === 'ENUM' && activeDbType === DB_TYPES.MYSQL" class="space-y-2">
+             <div class="flex items-center justify-between">
+                <label class="block text-[10px] text-gray-400 uppercase">Enum Values</label>
+                <button @click="addEnumValue" class="px-2 py-1 text-xs rounded bg-[#2d2d2d] hover:bg-[#3d3d3d] text-gray-300">Add</button>
+            </div>
+            <div v-for="(enumValue, enumIndex) in getEnumValues()" :key="`enum-${enumIndex}`" class="flex gap-2">
+                <input :value="enumValue" @input="(e) => updateEnumValue(enumIndex, e.target.value)" class="flex-1 bg-[#2a2a2a] border border-gray-600 rounded px-2 py-1 text-white text-xs" type="text" placeholder="value" />
+                <button @click="removeEnumValue(enumIndex)" class="px-2 py-1 text-xs rounded bg-red-900/30 hover:bg-red-900/50 text-red-300">Remove</button>
+            </div>
+        </div>
+
+        <!-- Generic SQL Length/Params -->
+        <div v-if="activeDbType !== DB_TYPES.MONGODB && ['VARCHAR', 'CHAR', 'DECIMAL', 'FLOAT'].includes(selectedItem.type)" class="space-y-2">
+             <label class="block text-[10px] text-gray-400 uppercase mb-1">Length / Parameters</label>
+             <input :value="selectedItem.typeParams || ''" @input="(e) => updateFieldOption('typeParams', e.target.value)" class="w-full bg-[#2a2a2a] border border-gray-600 rounded px-2 py-1 text-white text-xs" type="text" placeholder="e.g. 255 or 10,2" />
+        </div>
+
+        <div v-if="selectedItem.type === 'Number' && activeDbType === DB_TYPES.MONGODB" class="space-y-3">
             <label class="block text-xs font-bold text-gray-500 uppercase">Number Options</label>
             <div class="grid grid-cols-3 gap-2">
                 <input :value="selectedItem.min || ''" @input="(e) => updateFieldOption('min', e.target.value)" class="bg-[#2a2a2a] border border-gray-600 rounded px-2 py-1 text-white text-xs" type="number" placeholder="min" />
@@ -484,7 +635,7 @@ const deleteItem = async () => {
             </div>
         </div>
 
-        <div v-if="selectedItem.type === 'Boolean'" class="space-y-3">
+        <div v-if="selectedItem.type === 'Boolean' && activeDbType === DB_TYPES.MONGODB" class="space-y-3">
             <label class="block text-xs font-bold text-gray-500 uppercase">Boolean Options</label>
             <div>
                 <label class="block text-[10px] text-gray-400 uppercase mb-1">Default</label>
@@ -494,7 +645,7 @@ const deleteItem = async () => {
             </div>
         </div>
 
-        <div v-if="selectedItem.type === 'Date'" class="space-y-3">
+        <div v-if="selectedItem.type === 'Date' && activeDbType === DB_TYPES.MONGODB" class="space-y-3">
             <label class="block text-xs font-bold text-gray-500 uppercase">Date Options</label>
             <div class="grid grid-cols-2 gap-2">
                 <select :value="selectedItem.defaultDateMode || ''" @change="(e) => updateFieldOption('defaultDateMode', e.target.value)" class="bg-[#2a2a2a] border border-gray-600 rounded px-2 py-1 text-white text-xs">
@@ -511,7 +662,7 @@ const deleteItem = async () => {
             </div>
         </div>
 
-        <div v-if="selectedItem.type === 'ObjectId'" class="space-y-3">
+        <div v-if="selectedItem.type === 'ObjectId' && activeDbType === DB_TYPES.MONGODB" class="space-y-3">
             <label class="block text-xs font-bold text-gray-500 uppercase">ObjectId Options</label>
             <select :value="selectedItem.ref || ''" @change="(e) => updateFieldOption('ref', e.target.value)" class="w-full bg-[#2a2a2a] border border-gray-600 rounded px-3 py-2 text-white text-sm">
                 <option value="">Reference collection...</option>
@@ -520,7 +671,7 @@ const deleteItem = async () => {
             <input :value="selectedItem.defaultObjectId || ''" @input="(e) => updateFieldOption('defaultObjectId', e.target.value)" class="w-full bg-[#2a2a2a] border border-gray-600 rounded px-2 py-1 text-white text-xs" type="text" placeholder="default objectId (optional)" />
         </div>
 
-        <div v-if="selectedItem.type === 'Map'" class="space-y-3">
+        <div v-if="selectedItem.type === 'Map' && activeDbType === DB_TYPES.MONGODB" class="space-y-3">
             <label class="block text-xs font-bold text-gray-500 uppercase">Map Options</label>
             <select :value="selectedItem.mapOfType || ''" @change="(e) => updateFieldOption('mapOfType', e.target.value)" class="w-full bg-[#2a2a2a] border border-gray-600 rounded px-2 py-1 text-white text-xs">
                 <option value="">Map value type (default Mixed)</option>
@@ -528,7 +679,7 @@ const deleteItem = async () => {
             </select>
         </div>
 
-        <div v-if="selectedItem.type === 'Array'" class="space-y-3">
+        <div v-if="selectedItem.type === 'Array' && activeDbType === DB_TYPES.MONGODB" class="space-y-3">
             <label class="block text-xs font-bold text-gray-500 uppercase">Array Options</label>
             <select :value="selectedItem.arrayOfType || ''" @change="(e) => updateFieldOption('arrayOfType', e.target.value)" class="w-full bg-[#2a2a2a] border border-gray-600 rounded px-2 py-1 text-white text-xs">
                 <option value="">Array item type (default Mixed)</option>

@@ -8,6 +8,7 @@ import UiLayer from './components/UiLayer.vue'
 import { Sparkles, Download, Share2, Undo2, Redo2, PanelLeftOpen, Code, Trash2 } from 'lucide-vue-next'
 import { useSchemaStore } from './stores/schemaStore'
 import { useUiStore } from './stores/uiStore'
+import { getDatabaseEntityTerms } from './factories/databaseFactory'
 
 const isExportOpen = ref(false)
 const exportCollectionId = ref(null)
@@ -15,6 +16,7 @@ const exportCollectionIds = ref([])
 const isSidebarOpen = ref(true)
 const store = useSchemaStore()
 const ui = useUiStore()
+const entityTerms = computed(() => getDatabaseEntityTerms(store.activeDatabaseType))
 const shouldShowPropertiesPanel = computed(() => {
     return store.selectedItemType === 'collection' || store.selectedItemType === 'field'
 })
@@ -54,13 +56,13 @@ const deleteBulkSelectedCollections = async () => {
     const ids = selectedCollections.value.map((collection) => collection.id)
     if (ids.length < 2) return
     const confirmed = await ui.openConfirm({
-        title: 'Delete Selected Collections',
-        message: `Delete ${ids.length} selected collections? This action cannot be undone immediately.`,
+        title: `Delete Selected ${entityTerms.value.plural}`,
+        message: `Delete ${ids.length} selected ${entityTerms.value.pluralLower}? This action cannot be undone immediately.`,
         confirmText: 'Delete',
     })
     if (!confirmed) return
     store.removeCollections(ids)
-    ui.showToast(`${ids.length} collections deleted.`, 'success')
+    ui.showToast(`${ids.length} ${entityTerms.value.pluralLower} deleted.`, 'success')
 }
 
 const handleUndo = () => {
@@ -110,11 +112,11 @@ onMounted(() => {
         >
           <button @click="exportBulkSelectedCollections" class="flex items-center gap-2 px-3 py-1.5 bg-[#2d2d2d] hover:bg-[#3d3d3d] text-gray-300 hover:text-white rounded text-sm font-medium transition-colors border border-gray-600/50">
             <Code :size="16" />
-            Export Selected
+            Export Selected {{ entityTerms.plural }}
           </button>
           <button @click="deleteBulkSelectedCollections" class="flex items-center gap-2 px-3 py-1.5 bg-red-900/25 hover:bg-red-900/40 text-red-300 hover:text-red-200 rounded text-sm font-medium transition-colors border border-red-800/60">
             <Trash2 :size="16" />
-            Delete Selected
+            Delete Selected {{ entityTerms.plural }}
           </button>
         </div>
         

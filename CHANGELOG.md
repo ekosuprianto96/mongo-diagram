@@ -1,0 +1,54 @@
+# Changelog
+
+All notable changes to this project will be documented in this file.
+
+The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
+and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
+
+## [Unreleased]
+
+### Added
+
+- Placeholder for upcoming changes.
+
+## [2.3.0] - 2026-02-17
+
+### Added
+
+- Database adapter factory for reusable per-database behavior.
+- Dynamic terminology by DB type:
+  - MongoDB => Collection/Collections
+  - MySQL/PostgreSQL => Table/Tables
+- Ordered default naming for new entities (`new_collection_1`, `new_table_1`, etc.).
+- SQL constraint controls in field properties:
+  - Foreign key configuration (`references`, `ON DELETE`, `ON UPDATE`)
+  - Check constraint expression and optional name
+  - Index naming
+- Import test payloads in `test-data/` for all supported databases.
+- Automated version sync script `npm run version:sync`.
+
+### Changed
+
+- SQL export generation now outputs runnable order:
+  1. `CREATE TABLE`
+  2. `CREATE INDEX`
+  3. `ALTER TABLE ... ADD CONSTRAINT ... FOREIGN KEY`
+- SQL identifier normalization improved to snake_case for table/column names.
+- FK mapping improved to use stable `referencesColumnId` (fallback to name when needed).
+- Default new field type now follows active DB type:
+  - MongoDB => `String`
+  - MySQL/PostgreSQL => `VARCHAR`
+- Sidebar/app version label now loads dynamically from `VITE_APP_VERSION` / package version.
+
+### Fixed
+
+- SQL export scope aligned with active database in code export flow.
+- Export payload now excludes transient UI selection state (`selected`).
+
+### Security
+
+- Project JSON import switched to strict validation:
+  - validates database list, active database id, collections, edges, and references
+  - rejects invalid payloads with specific error messages
+
+<!-- Optional: add repository compare/release links here when remote URL is available. -->

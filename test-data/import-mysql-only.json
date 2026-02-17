@@ -1,0 +1,68 @@
+{
+  "version": 1,
+  "exportedAt": "2026-02-17T10:00:00.000Z",
+  "databases": [
+    { "id": "db-mysql", "name": "mysql_store", "type": "MySQL" }
+  ],
+  "activeDatabaseId": "db-mysql",
+  "collections": [
+    {
+      "id": "col-users",
+      "databaseId": "db-mysql",
+      "type": "collection",
+      "position": { "x": 200, "y": 180 },
+      "data": {
+        "label": "users",
+        "fields": [
+          { "id": "f-users-id", "name": "id", "type": "INT", "primaryKey": true, "autoIncrement": true },
+          { "id": "f-users-email", "name": "email", "type": "VARCHAR", "typeParams": "255", "unique": true, "nullable": false }
+        ]
+      }
+    },
+    {
+      "id": "col-orders",
+      "databaseId": "db-mysql",
+      "type": "collection",
+      "position": { "x": 580, "y": 180 },
+      "data": {
+        "label": "orders",
+        "fields": [
+          { "id": "f-orders-id", "name": "id", "type": "INT", "primaryKey": true, "autoIncrement": true },
+          {
+            "id": "f-orders-user-id",
+            "name": "user_id",
+            "type": "INT",
+            "nullable": false,
+            "foreignKey": true,
+            "referencesTable": "users",
+            "referencesColumnId": "f-users-id",
+            "referencesColumn": "id",
+            "fkConstraintName": "fk_orders_users",
+            "onDelete": "CASCADE",
+            "onUpdate": "CASCADE"
+          },
+          {
+            "id": "f-orders-total",
+            "name": "total",
+            "type": "DECIMAL",
+            "typeParams": "10,2",
+            "nullable": false,
+            "checkExpression": "total >= 0"
+          }
+        ]
+      }
+    }
+  ],
+  "edges": [
+    {
+      "id": "e-users-orders",
+      "databaseId": "db-mysql",
+      "source": "col-users",
+      "target": "col-orders",
+      "sourceHandle": "f-users-id",
+      "targetHandle": "f-orders-user-id",
+      "animated": false,
+      "style": { "stroke": "#60a5fa", "strokeWidth": 2, "strokeDasharray": "7 5" }
+    }
+  ]
+}

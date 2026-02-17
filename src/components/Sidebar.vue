@@ -1,43 +1,51 @@
 <script setup>
-import { ref } from 'vue'
+import { computed, ref } from 'vue'
 import { useSchemaStore } from '../stores/schemaStore'
 import { useUiStore } from '../stores/uiStore'
 import { Plus, Database, Code, Trash2, Download, Upload, PanelLeftClose } from 'lucide-vue-next'
+import CreateDatabaseModal from './CreateDatabaseModal.vue'
+import { createDatabaseAdapter, getDatabaseEntityTerms, getNextDefaultEntityName } from '../factories/databaseFactory'
 
 const store = useSchemaStore()
 const ui = useUiStore()
 const emit = defineEmits(['export-collection', 'toggle-sidebar'])
 const importInput = ref(null)
+const isCreateDbModalOpen = ref(false)
+const entityTerms = computed(() => getDatabaseEntityTerms(store.activeDatabaseType))
+const appVersion = `v${__APP_VERSION__ || import.meta.env.VITE_APP_VERSION || '0.0.0'}`
 
 const addNewCollection = () => {
     if (!store.activeDatabaseId) return
     const id = Date.now().toString()
+    
+    // Get default field based on DB Type
+    const dbAdapter = createDatabaseAdapter(store.activeDatabaseType)
+    const defaultField = { ...dbAdapter.getDefaultField(), id: `f-${Date.now()}-1` }
+    const nextEntityName = getNextDefaultEntityName(
+        store.activeDatabaseType,
+        store.activeCollections.map((collection) => collection?.data?.label)
+    )
+
     store.addCollection({
         id,
         type: 'collection',
         position: { x: Math.random() * 400, y: Math.random() * 400 },
         data: {
-            label: 'New Collection',
-            fields: [
-                { id: `f-${Date.now()}-1`, name: '_id', type: 'ObjectId', key: true }
-            ]
+            label: nextEntityName,
+            fields: [defaultField]
         }
     })
     store.selectItem(id, 'collection')
 }
 
-const addNewDatabase = async () => {
-    const name = await ui.openPrompt({
-        title: 'Create Database',
-        message: 'Enter database name:',
-        value: 'NewDatabase',
-        placeholder: 'Database name',
-        required: true,
-        confirmText: 'Create',
-    })
-    if (name === null) return
-    store.addDatabase(name)
-    ui.showToast(`Database "${name}" created.`, 'success')
+const openCreateDbModal = () => {
+    isCreateDbModalOpen.value = true
+}
+
+const handleCreateDatabase = ({ name, type }) => {
+    store.addDatabase(name, type)
+    ui.showToast(`Database "${name}" (${type}) created.`, 'success')
+    isCreateDbModalOpen.value = false
 }
 
 const selectDatabase = (event) => {
@@ -49,7 +57,7 @@ const deleteActiveDatabase = async () => {
     if (!activeDb) return
     const confirmed = await ui.openConfirm({
         title: 'Delete Database',
-        message: `Delete database "${activeDb.name}" and all its collections?`,
+        message: `Delete database "${activeDb.name}" and all its ${entityTerms.value.pluralLower}?`,
         confirmText: 'Delete',
     })
     if (!confirmed) return
@@ -68,13 +76,13 @@ const selectCollection = (event, id) => {
 
 const deleteCollection = async (id) => {
     const confirmed = await ui.openConfirm({
-        title: 'Delete Collection',
-        message: 'Are you sure you want to delete this collection?',
+        title: `Delete ${entityTerms.value.singular}`,
+        message: `Are you sure you want to delete this ${entityTerms.value.singularLower}?`,
         confirmText: 'Delete',
     })
     if (!confirmed) return
     store.removeCollection(id)
-    ui.showToast('Collection deleted.', 'success')
+    ui.showToast(`${entityTerms.value.singular} deleted.`, 'success')
 }
 
 const exportProjectFile = () => {
@@ -141,7 +149,7 @@ const handleImportProject = async (event) => {
                     >
                         <option v-for="db in store.databases" :key="db.id" :value="db.id">{{ db.name }}</option>
                     </select>
-                    <button @click="addNewDatabase" class="px-2 py-1.5 rounded bg-[#2d2d2d] hover:bg-[#3d3d3d] text-gray-300 border border-gray-600/70" title="Create Database">
+                    <button @click="openCreateDbModal" class="px-2 py-1.5 rounded bg-[#2d2d2d] hover:bg-[#3d3d3d] text-gray-300 border border-gray-600/70" title="Create Database">
                         <Plus :size="14" />
                     </button>
                     <button @click="deleteActiveDatabase" class="px-2 py-1.5 rounded bg-red-900/30 hover:bg-red-900/50 text-red-300 border border-red-900/60" title="Delete Active Database">
@@ -151,7 +159,7 @@ const handleImportProject = async (event) => {
             </div>
 
             <div class="space-y-2">
-                <p class="text-xs font-bold text-gray-500 uppercase tracking-wider">Collections</p>
+                <p class="text-xs font-bold text-gray-500 uppercase tracking-wider">{{ entityTerms.plural }}</p>
                 <div v-for="collection in store.activeCollections" :key="collection.id" 
                      @click="selectCollection($event, collection.id)"
                      class="flex items-center gap-2 p-2 rounded cursor-pointer transition-colors group"
@@ -163,7 +171,7 @@ const handleImportProject = async (event) => {
                         <button @click.stop="$emit('export-collection', collection.id)" class="p-1 hover:bg-gray-700 rounded text-gray-400 hover:text-white" title="Export Code">
                             <Code :size="12" />
                         </button>
-                        <button @click.stop="deleteCollection(collection.id)" class="p-1 hover:bg-red-900/50 rounded text-gray-400 hover:text-red-400" title="Delete Collection">
+                        <button @click.stop="deleteCollection(collection.id)" class="p-1 hover:bg-red-900/50 rounded text-gray-400 hover:text-red-400" :title="`Delete ${entityTerms.singular}`">
                             <Trash2 :size="12" />
                         </button>
                     </div>
@@ -172,7 +180,7 @@ const handleImportProject = async (event) => {
                 <button @click="addNewCollection" 
                         class="w-full mt-2 flex items-center justify-center gap-2 p-2 bg-[#2d2d2d] hover:bg-[#3d3d3d] rounded text-sm text-gray-300 transition-colors border border-gray-600 border-dashed">
                     <Plus :size="16" />
-                    New Collection
+                    New {{ entityTerms.singular }}
                 </button>
             </div>
 
@@ -197,7 +205,12 @@ const handleImportProject = async (event) => {
         </div>
 
         <div class="p-4 border-t border-gray-700 text-xs text-gray-500 text-center">
-            v2.0.0
+            {{ appVersion }}
         </div>
     </aside>
+    <CreateDatabaseModal 
+        :is-open="isCreateDbModalOpen" 
+        @close="isCreateDbModalOpen = false"
+        @create="handleCreateDatabase"
+    />
 </template>

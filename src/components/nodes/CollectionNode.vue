@@ -4,6 +4,7 @@ import { useVueFlow } from '@vue-flow/core'
 import { MoreVertical, Plus, Database } from 'lucide-vue-next'
 import { useSchemaStore } from '../../stores/schemaStore'
 import FieldItem from './FieldItem.vue'
+import { getDefaultNewFieldType } from '../../factories/databaseFactory'
 
 const props = defineProps({
   data: {
@@ -99,10 +100,11 @@ const selectCollection = (event) => {
 
 const addField = () => {
     const newId = `f-${Date.now()}`
+    const defaultType = getDefaultNewFieldType(store.activeDatabaseType)
     store.addField(props.id, { 
         id: newId, 
         name: 'newField', 
-        type: 'String' 
+        type: defaultType,
     })
     store.selectItem(newId, 'field', props.id)
 }
