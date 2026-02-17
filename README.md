@@ -9,7 +9,7 @@ You can model tables/collections, define fields, relationships, SQL constraints,
 
 ## Current Version
 
-- `v2.3.1`
+- `v2.3.2`
 - Version label in UI is loaded automatically from `package.json` via `VITE_APP_VERSION` sync.
 
 ## Main Features
@@ -53,7 +53,7 @@ Full release notes are available in [`RELEASE_NOTES.md`](./RELEASE_NOTES.md).
 
 - `VITE_HISTORY_MAX_SIZE=100`
 - `VITE_HISTORY_RETENTION_MS=600000`
-- `VITE_APP_VERSION=2.3.1`
+- `VITE_APP_VERSION=2.3.2`
 
 ## Version Sync Automation
 

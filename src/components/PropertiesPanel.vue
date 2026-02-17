@@ -564,22 +564,22 @@ const deleteItem = async () => {
 
         <div v-if="selectedItem.type === 'String' && activeDbType === DB_TYPES.MONGODB" class="space-y-3">
             <label class="block text-xs font-bold text-gray-500 uppercase">String Options</label>
-            <div class="grid grid-cols-3 gap-2">
-                <div class="flex items-center justify-between p-2 bg-[#2a2a2a] rounded">
-                    <span class="text-xs text-gray-300">Trim</span>
-                    <button @click="toggleProp('trim')" class="w-8 h-4 rounded-full relative transition-colors" :class="selectedItem.trim ? 'bg-emerald-500' : 'bg-gray-600'">
+            <div class="grid grid-cols-1 gap-2">
+                <div class="min-w-0 flex items-center justify-between p-2 bg-[#2a2a2a] rounded">
+                    <span class="truncate text-xs text-gray-300">Trim</span>
+                    <button @click="toggleProp('trim')" class="shrink-0 w-8 h-4 rounded-full relative transition-colors" :class="selectedItem.trim ? 'bg-emerald-500' : 'bg-gray-600'">
                         <div class="absolute top-0.5 left-0.5 bg-white w-3 h-3 rounded-full transition-transform" :class="selectedItem.trim ? 'translate-x-4' : ''"></div>
                     </button>
                 </div>
-                <div class="flex items-center justify-between p-2 bg-[#2a2a2a] rounded">
-                    <span class="text-xs text-gray-300">Lowercase</span>
-                    <button @click="toggleProp('lowercase')" class="w-8 h-4 rounded-full relative transition-colors" :class="selectedItem.lowercase ? 'bg-emerald-500' : 'bg-gray-600'">
+                <div class="min-w-0 flex items-center justify-between p-2 bg-[#2a2a2a] rounded">
+                    <span class="truncate text-xs text-gray-300">Lowercase</span>
+                    <button @click="toggleProp('lowercase')" class="shrink-0 w-8 h-4 rounded-full relative transition-colors" :class="selectedItem.lowercase ? 'bg-emerald-500' : 'bg-gray-600'">
                         <div class="absolute top-0.5 left-0.5 bg-white w-3 h-3 rounded-full transition-transform" :class="selectedItem.lowercase ? 'translate-x-4' : ''"></div>
                     </button>
                 </div>
-                <div class="flex items-center justify-between p-2 bg-[#2a2a2a] rounded">
-                    <span class="text-xs text-gray-300">Uppercase</span>
-                    <button @click="toggleProp('uppercase')" class="w-8 h-4 rounded-full relative transition-colors" :class="selectedItem.uppercase ? 'bg-emerald-500' : 'bg-gray-600'">
+                <div class="min-w-0 flex items-center justify-between p-2 bg-[#2a2a2a] rounded">
+                    <span class="truncate text-xs text-gray-300">Uppercase</span>
+                    <button @click="toggleProp('uppercase')" class="shrink-0 w-8 h-4 rounded-full relative transition-colors" :class="selectedItem.uppercase ? 'bg-emerald-500' : 'bg-gray-600'">
                         <div class="absolute top-0.5 left-0.5 bg-white w-3 h-3 rounded-full transition-transform" :class="selectedItem.uppercase ? 'translate-x-4' : ''"></div>
                     </button>
                 </div>

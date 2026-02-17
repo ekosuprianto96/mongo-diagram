@@ -11,6 +11,20 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 - Placeholder for upcoming changes.
 
+## [2.3.2] - 2026-02-17
+
+### Fixed
+
+- Right properties panel no longer closes unexpectedly when editing SQL field properties (field selection is now preserved while the parent collection is still valid).
+- Resolved overflow in MongoDB `String Options` controls in the right panel by switching to a safer vertical layout with stable toggle sizing.
+
+### Changed
+
+- Release metadata and docs synced to `v2.3.2`:
+  - `package.json` version
+  - `.env` -> `VITE_APP_VERSION=2.3.2`
+  - `README.md`, `CHANGELOG.md`, `RELEASE_NOTES.md`
+
 ## [2.3.1] - 2026-02-17
 
 ### Fixed

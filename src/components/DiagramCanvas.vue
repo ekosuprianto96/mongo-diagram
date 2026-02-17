@@ -246,12 +246,21 @@ onPaneContextMenu((event) => {
 })
 
 watch([getSelectedNodes, getSelectedEdges], ([nodes, edges]) => {
+  if (store.selectedItemType === 'field') {
+    const fieldCollectionStillExists = store.activeCollections.some(
+      (collection) => collection.id === store.selectedCollectionId
+    )
+    if (fieldCollectionStillExists) {
+      return
+    }
+    store.selectItem(null, null, null)
+    return
+  }
+
   const totalSelected = nodes.length + edges.length
 
   if (totalSelected !== 1) {
-    if (store.selectedItemType !== 'field') {
-      store.selectItem(null, null, null)
-    }
+    store.selectItem(null, null, null)
     return
   }
 

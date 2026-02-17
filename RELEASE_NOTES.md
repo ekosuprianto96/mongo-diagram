@@ -1,5 +1,23 @@
 # Release Notes
 
+## v2.3.2 - 2026-02-17
+
+### Highlights
+
+- Patch release focused on right-panel editing stability and layout robustness.
+
+### Fixed
+
+- Right properties panel now stays open while editing SQL field properties (no unexpected auto-close on field updates).
+- Fixed overflow in MongoDB `String Options` area by using a safer stacked toggle layout.
+
+### Updated
+
+- Synced release metadata to `v2.3.2`:
+  - `package.json` version
+  - `.env` `VITE_APP_VERSION`
+  - `README.md`, `CHANGELOG.md`, and `RELEASE_NOTES.md`
+
 ## v2.3.1 - 2026-02-17
 
 ### Highlights
