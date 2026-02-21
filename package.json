@@ -1,7 +1,7 @@
 {
   "name": "mongo-diagram",
   "private": true,
-  "version": "2.4.0",
+  "version": "2.5.0",
   "type": "module",
   "scripts": {
     "version:sync": "node scripts/sync-version.mjs",
@@ -9,6 +9,8 @@
     "prebuild": "npm run version:sync",
     "dev": "vite",
     "build": "vite build",
+    "build:laravel": "BUILD_TARGET=laravel vite build",
+    "build:express": "BUILD_TARGET=express vite build",
     "preview": "vite preview"
   },
   "dependencies": {

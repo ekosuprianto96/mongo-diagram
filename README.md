@@ -9,7 +9,7 @@ You can model tables/collections, define fields, relationships, SQL constraints,
 
 ## Current Version
 
-- `v2.4.0`
+- `v2.5.0`
 - Version label in UI is loaded automatically from `package.json` via `VITE_APP_VERSION` sync.
 
 ## Main Features
@@ -43,7 +43,13 @@ Full release notes are available in [`RELEASE_NOTES.md`](./RELEASE_NOTES.md).
 
 - `VITE_HISTORY_MAX_SIZE=100`
 - `VITE_HISTORY_RETENTION_MS=600000`
-- `VITE_APP_VERSION=2.3.2`
+- `VITE_APP_VERSION=2.5.0`
+
+## Laravel Package
+
+Mongo Diagram now has an official companion package for Laravel to help you manage migrations visually within your Laravel application.
+
+- **Laravel Visual Migrator**: [ekosuprianto96/laravel-visual-migrator](https://github.com/ekosuprianto96/laravel-visual-migrator)
 
 ## Version Sync Automation
 

@@ -24,34 +24,64 @@ const adapter = computed(() => createDatabaseAdapter(store.activeDatabaseType))
 const exportTargets = computed(() => adapter.value.getExportTargets())
 const selectedExportTarget = ref(adapter.value.getDefaultExportTarget())
 
+const selectedCollectionIds = ref(new Set())
+
 const resolveTargetCollections = () => {
     const activeDbId = store.activeDatabaseId
     const activeCollections = store.collections.filter((collection) => collection.databaseId === activeDbId)
 
-    if (props.collectionIds.length > 0) {
-        const ids = new Set(props.collectionIds)
-        return activeCollections.filter((collection) => ids.has(collection.id))
-    }
+    return activeCollections.filter((collection) => selectedCollectionIds.value.has(collection.id))
+}
 
-    if (props.collectionId) {
-        return activeCollections.filter((collection) => collection.id === props.collectionId)
-    }
+const activeCollectionsList = computed(() => {
+    return store.collections.filter((collection) => collection.databaseId === store.activeDatabaseId)
+})
 
-    return activeCollections
+const toggleCollection = (id) => {
+    if (selectedCollectionIds.value.has(id)) {
+        selectedCollectionIds.value.delete(id)
+    } else {
+        selectedCollectionIds.value.add(id)
+    }
+}
+
+const selectAll = () => {
+    selectedCollectionIds.value = new Set(activeCollectionsList.value.map(c => c.id))
+}
+
+const deselectAll = () => {
+    selectedCollectionIds.value.clear()
 }
 
 const code = computed(() => {
+    const collections = resolveTargetCollections()
+    if (collections.length === 0) return '-- No tables selected for export'
+    
     return adapter.value.generateCode({
         target: selectedExportTarget.value,
         store,
         collectionId: props.collectionId,
         collectionIds: props.collectionIds,
-        collections: resolveTargetCollections(),
+        collections: collections,
     })
 })
 const editorContainer = ref(null)
 const isLoading = ref(true)
 const language = computed(() => adapter.value.getLanguage(selectedExportTarget.value))
+const showTableList = ref(true)
+const toggleTableList = () => { showTableList.value = !showTableList.value }
+
+const initSelection = () => {
+    const collections = activeCollectionsList.value
+    if (props.collectionIds.length > 0) {
+        selectedCollectionIds.value = new Set(props.collectionIds)
+    } else if (props.collectionId) {
+        selectedCollectionIds.value = new Set([props.collectionId])
+    } else {
+        selectedCollectionIds.value = new Set(collections.map(c => c.id))
+    }
+}
+
 let editorInstance = null
 
 watch(
@@ -135,6 +165,7 @@ const initMonaco = () => {
 
 watch(() => props.isOpen, (newVal) => {
     if (newVal) {
+        initSelection()
         // Wait for DOM to render modal
         setTimeout(() => {
             initMonaco();
@@ -167,7 +198,7 @@ onUnmounted(() => {
 
 <template>
   <div v-if="isOpen" class="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-center justify-center p-4">
-    <div class="bg-[#1e1e1e] border border-gray-700 rounded-lg shadow-2xl w-full max-w-4xl h-[80vh] flex flex-col overflow-hidden">
+    <div class="bg-[#1e1e1e] border border-gray-700 rounded-lg shadow-2xl w-full max-w-5xl h-[85vh] flex flex-col overflow-hidden">
       <!-- Header -->
       <div class="px-6 py-4 border-b border-gray-700 flex justify-between items-center gap-3 bg-[#252525]">
         <div class="flex min-w-0 items-center gap-3">
@@ -182,18 +213,55 @@ onUnmounted(() => {
             </select>
           </div>
         </div>
-        <button @click="$emit('close')" class="text-gray-400 hover:text-white transition-colors">
-          <X :size="20" />
-        </button>
+        <div class="flex items-center gap-3">
+            <button 
+                @click="toggleTableList"
+                class="text-xs px-2 py-1 rounded bg-[#2a2a2a] border border-gray-600 text-gray-300 hover:text-white"
+            >
+                {{ showTableList ? 'Hide Tables' : 'Show Tables' }}
+            </button>
+            <button @click="$emit('close')" class="text-gray-400 hover:text-white transition-colors">
+            <X :size="20" />
+            </button>
+        </div>
       </div>
 
       <!-- Content -->
-      <div class="flex-1 bg-[#1e1e1e] overflow-hidden relative">
-         <div v-show="isLoading" class="absolute inset-0 flex flex-col items-center justify-center z-10 bg-[#1e1e1e]">
-            <div class="w-8 h-8 border-4 border-emerald-500 border-t-transparent rounded-full animate-spin mb-2"></div>
-            <span class="text-gray-400 text-sm">Loading Editor...</span>
-         </div>
-         <div ref="editorContainer" class="w-full h-full" :class="{ 'opacity-0': isLoading }"></div>
+      <div class="flex-1 flex overflow-hidden">
+        <!-- Sidebar: Table Selection -->
+        <div v-if="showTableList" class="w-64 border-r border-gray-700 bg-[#1a1a1a] flex flex-col">
+            <div class="p-3 border-b border-gray-700 flex items-center justify-between gap-2">
+                <span class="text-xs font-bold text-gray-500 uppercase">Select Tables</span>
+                <div class="flex gap-2">
+                    <button @click="selectAll" class="text-[10px] text-emerald-400 hover:underline">All</button>
+                    <button @click="deselectAll" class="text-[10px] text-red-400 hover:underline">None</button>
+                </div>
+            </div>
+            <div class="flex-1 overflow-y-auto p-2 space-y-1">
+                <label 
+                    v-for="collection in activeCollectionsList" 
+                    :key="collection.id"
+                    class="flex items-center gap-2 p-2 rounded hover:bg-[#2a2a2a] cursor-pointer transition-colors"
+                >
+                    <input 
+                        type="checkbox" 
+                        :checked="selectedCollectionIds.has(collection.id)"
+                        @change="toggleCollection(collection.id)"
+                        class="rounded border-gray-600 bg-gray-700 text-emerald-500 focus:ring-emerald-500"
+                    >
+                    <span class="text-sm text-gray-300 truncate">{{ collection.data.label }}</span>
+                </label>
+            </div>
+        </div>
+
+        <!-- Main: Code Editor -->
+        <div class="flex-1 bg-[#1e1e1e] overflow-hidden relative">
+            <div v-show="isLoading" class="absolute inset-0 flex flex-col items-center justify-center z-10 bg-[#1e1e1e]">
+                <div class="w-8 h-8 border-4 border-emerald-500 border-t-transparent rounded-full animate-spin mb-2"></div>
+                <span class="text-gray-400 text-sm">Loading Editor...</span>
+            </div>
+            <div ref="editorContainer" class="w-full h-full" :class="{ 'opacity-0': isLoading }"></div>
+        </div>
       </div>
 
       <!-- Footer -->

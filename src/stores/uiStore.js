@@ -16,6 +16,9 @@ export const useUiStore = defineStore('ui', {
     },
     toasts: [],
   }),
+  getters: {
+    isPackageMode: () => import.meta.env.VITE_MG_DIAGRAM_MODE === 'packages'
+  },
   actions: {
     showToast(message, type = 'info', duration = 2600) {
       const id = `toast-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`

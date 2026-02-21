@@ -1,5 +1,24 @@
 # Release Notes
 
+## v2.5.0 - 2026-02-22
+
+### Highlights
+
+- **Laravel Companion Package**: Launched [Laravel Visual Migrator](https://github.com/ekosuprianto96/laravel-visual-migrator) to bridge Mongo Diagram with Laravel projects.
+- **Version Sync**: Improved automation for versioning across dependencies.
+
+### New Features
+
+- **Laravel Integration**: You can now use the Laravel Visual Migrator package to import and sync migrations directly from your Laravel environment.
+- **Documentation Update**: Added quick links to the Laravel package repository in the root README.
+
+### Improved & Fixed
+
+- **Version Consistency**: Updated all documentation and environment variables to reflect `v2.5.0`.
+- **Sync Scripts**: Refined `scripts/sync-version.mjs` for better reliability during build.
+
+---
+
 ## v2.4.0 - 2026-02-17
 
 ### Highlights

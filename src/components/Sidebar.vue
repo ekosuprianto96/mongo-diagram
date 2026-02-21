@@ -133,8 +133,8 @@ const handleImportProject = async (event) => {
 </script>
 
 <template>
-    <aside class="w-64 bg-[#1e1e1e] border-r border-gray-700 flex flex-col h-full">
-        <div class="p-4 border-b border-gray-700 flex items-center gap-2">
+    <aside class="w-64 bg-[#1e1e1e] border-r border-gray-700 flex flex-col h-full overflow-hidden">
+        <div class="p-4 border-b border-gray-700 flex items-center gap-2 bg-[#252525]">
             <div class="w-8 h-8 rounded bg-emerald-500 flex items-center justify-center text-white font-bold">
                 M
             </div>
@@ -148,7 +148,7 @@ const handleImportProject = async (event) => {
             </button>
         </div>
 
-        <div class="p-4 space-y-4 flex-1 overflow-y-auto">
+        <div class="p-4 space-y-4 flex-1 overflow-y-auto custom-scrollbar">
             <div class="space-y-2">
                 <p class="text-xs font-bold text-gray-500 uppercase tracking-wider">Database</p>
                 <div class="flex min-w-0 gap-2">
@@ -219,13 +219,30 @@ const handleImportProject = async (event) => {
             </div>
         </div>
 
-        <div class="p-4 border-t border-gray-700 text-xs text-gray-500 text-center">
+        <div class="p-4 border-t border-gray-700 text-xs text-gray-500 text-center bg-[#252525]">
             {{ appVersion }}
         </div>
     </aside>
+
     <CreateDatabaseModal 
         :is-open="isCreateDbModalOpen" 
         @close="isCreateDbModalOpen = false"
         @create="handleCreateDatabase"
     />
 </template>
+
+<style scoped>
+.custom-scrollbar::-webkit-scrollbar {
+    width: 4px;
+}
+.custom-scrollbar::-webkit-scrollbar-track {
+    background: transparent;
+}
+.custom-scrollbar::-webkit-scrollbar-thumb {
+    background: #3f3f46;
+    border-radius: 10px;
+}
+.custom-scrollbar::-webkit-scrollbar-thumb:hover {
+    background: #52525b;
+}
+</style>

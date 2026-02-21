@@ -1,10 +1,12 @@
 import { defineStore } from 'pinia'
-import { useStorage } from '@vueuse/core'
+import { useStorage, useDebounceFn } from '@vueuse/core'
 import { useUiStore } from './uiStore'
 import { DB_TYPES } from '../constants/dbTypes'
+import { createApiBridge } from '../bridge/apiBridge'
 
 const STORAGE_KEY = 'mongo-architect-schema'
 let hasShownStorageFullAlert = false
+let apiBridgeInstance = null
 
 const persistProjectState = (state) => {
     if (typeof window === 'undefined') return
@@ -12,7 +14,12 @@ const persistProjectState = (state) => {
     const payload = {
         databases: state.databases,
         activeDatabaseId: state.activeDatabaseId,
-        collections: state.collections,
+        collections: state.collections.map(c => ({
+            ...c,
+            // We don't want isPersisted flag to stay if user changes something critical
+            // but for now, we need it to survive refresh to distinguish from new drafts
+            isPersisted: c.isPersisted || false
+        })),
         edges: state.edges,
         selectedItemId: state.selectedItemId,
         selectedItemType: state.selectedItemType,
@@ -21,6 +28,8 @@ const persistProjectState = (state) => {
     }
 
     try {
+        // We only persist to LocalStorage automatically.
+        // Syncing to remote/Laravel should NEVER be automatic to avoid overwriting files on refresh.
         window.localStorage.setItem(STORAGE_KEY, JSON.stringify(payload))
         return { ok: true }
     } catch (error) {
@@ -434,48 +443,8 @@ export const useSchemaStore = defineStore('schema', {
             },
         ],
         activeDatabaseId: 'db-main',
-        collections: [
-            {
-                id: '1',
-                databaseId: 'db-main',
-                type: 'collection',
-                position: { x: 250, y: 5 },
-                data: {
-                    label: 'Users',
-                    fields: [
-                        { id: 'f1', name: '_id', type: 'ObjectId', key: true },
-                        { id: 'f2', name: 'username', type: 'String' },
-                        { id: 'f3', name: 'email', type: 'String' },
-                        {
-                            id: 'f-addr',
-                            name: 'address',
-                            type: 'Object',
-                            children: [
-                                { id: 'f-city', name: 'city', type: 'String' },
-                                { id: 'f-zip', name: 'zip', type: 'Number' }
-                            ]
-                        }
-                    ]
-                },
-            },
-            {
-                id: '2',
-                databaseId: 'db-main',
-                type: 'collection',
-                position: { x: 100, y: 250 },
-                data: {
-                    label: 'Posts',
-                    fields: [
-                        { id: 'f4', name: '_id', type: 'ObjectId', key: true },
-                        { id: 'f5', name: 'title', type: 'String' },
-                        { id: 'f6', name: 'author_id', type: 'ObjectId', ref: 'Users' },
-                    ]
-                },
-            },
-        ],
-        edges: [
-            { id: 'e1-2', databaseId: 'db-main', source: '1', target: '2', sourceHandle: 'f1', targetHandle: 'f6', animated: true, style: { stroke: '#10b981' } }
-        ],
+        collections: [],
+        edges: [],
         selectedItemId: null,
         selectedItemType: null,
         selectedCollectionId: null,
@@ -483,6 +452,10 @@ export const useSchemaStore = defineStore('schema', {
         canUndo: false,
         canRedo: false,
         isDirty: false,
+        // Agnostic Bridge State
+        bridgeMode: 'local', // 'local' or 'remote'
+        apiBaseUrl: '',
+        apiHeaders: {},
     }),
     getters: {
         activeDatabase: (state) => state.databases.find((db) => db.id === state.activeDatabaseId) || null,
@@ -560,6 +533,8 @@ export const useSchemaStore = defineStore('schema', {
             return code
         }
     },
+    // Internal debounced function for layout saving
+    _debouncedSaveLayout: null,
     actions: {
         pruneInvalidEdges(databaseId = null) {
             const collections = databaseId
@@ -824,11 +799,40 @@ export const useSchemaStore = defineStore('schema', {
             }
 
             this.recordHistory()
+
+            // Merge Logic:
+            const incomingCollections = (parsed.collections || []).map(c => ({ ...c, isPersisted: true }))
+            const existingLocalDrafts = this.collections.filter(c => !c.isPersisted)
+
             if (Array.isArray(parsed.databases) && parsed.databases.length > 0) {
                 this.databases = parsed.databases
             }
-            this.collections = parsed.collections
-            this.edges = parsed.edges
+
+            if (existingLocalDrafts.length === 0) {
+                this.collections = incomingCollections
+                this.edges = (parsed.edges || []).map(e => ({ ...e, isPersisted: true }))
+            } else {
+                const collectionMap = new Map()
+                existingLocalDrafts.forEach(c => collectionMap.set(c.id, c))
+
+                const currentPositionMap = new Map(this.collections.map(c => [c.id, c.position]))
+
+                incomingCollections.forEach(c => {
+                    const updatedCol = { ...c }
+                    if (currentPositionMap.has(c.id)) {
+                        updatedCol.position = currentPositionMap.get(c.id)
+                    }
+                    collectionMap.set(c.id, updatedCol)
+                })
+                this.collections = Array.from(collectionMap.values())
+
+                const incomingEdges = (parsed.edges || []).map(e => ({ ...e, isPersisted: true }))
+                const edgeMap = new Map()
+                this.edges.filter(e => !e.isPersisted).forEach(e => edgeMap.set(e.id, e))
+                incomingEdges.forEach(e => edgeMap.set(e.id, e))
+                this.edges = Array.from(edgeMap.values())
+            }
+
             this.activeDatabaseId = parsed.activeDatabaseId || this.databases[0]?.id || 'db-main'
             this.initializeDatabases()
             this.pruneInvalidEdges()
@@ -948,18 +952,30 @@ export const useSchemaStore = defineStore('schema', {
             const START_Y = 60
             const X_GAP = 380
             const Y_GAP = 260
+            const MAX_PER_COLUMN = 8
 
             this.recordHistory()
             const layerEntries = Array.from(layers.entries()).sort((a, b) => a[0] - b[0])
+
+            let currentXOffset = 0
             layerEntries.forEach(([layer, collections]) => {
                 collections.forEach((collection, index) => {
                     const target = this.collections.find((item) => item.id === collection.id)
                     if (!target) return
+
+                    const wrapIndex = Math.floor(index / MAX_PER_COLUMN)
+                    const posInWrap = index % MAX_PER_COLUMN
+
                     target.position = {
-                        x: START_X + layer * X_GAP,
-                        y: START_Y + index * Y_GAP,
+                        x: START_X + (layer + wrapIndex + currentXOffset) * X_GAP,
+                        y: START_Y + posInWrap * Y_GAP,
                     }
                 })
+
+                // If this layer had multiple sub-columns due to wrapping, 
+                // push subsequent layers further to the right.
+                const extraColumns = Math.floor((collections.length - 1) / MAX_PER_COLUMN)
+                currentXOffset += extraColumns
             })
             this.syncHistoryState()
             return true
@@ -1136,6 +1152,115 @@ export const useSchemaStore = defineStore('schema', {
             this.collections.push(newCollection)
             this.selectItem(newId, 'collection')
             this.syncHistoryState()
+        },
+        /**
+         * Initialize the API bridge for remote synchronization.
+         */
+        initBridge(config = {}) {
+            this.bridgeMode = 'remote'
+            this.apiBaseUrl = config.baseUrl || this.apiBaseUrl
+            this.apiHeaders = config.headers || this.apiHeaders
+
+            apiBridgeInstance = createApiBridge({
+                baseUrl: this.apiBaseUrl,
+                headers: this.apiHeaders
+            })
+        },
+        /**
+         * Fetch schema from the remote backend.
+         */
+        async fetchRemoteSchema() {
+            if (!apiBridgeInstance) return { success: false, message: 'Bridge not initialized' }
+
+            const ui = useUiStore()
+            try {
+                const schema = await apiBridgeInstance.fetchSchema()
+                if (schema) {
+                    this.importProject(schema)
+                    return { success: true }
+                }
+            } catch (error) {
+                ui.showToast('Failed to fetch remote schema', 'error')
+                return { success: false, error }
+            }
+        },
+        /**
+         * Explicitly save schema to the remote backend.
+         */
+        async saveProject(selectedIds = null) {
+            if (!apiBridgeInstance) return { success: false, message: 'Bridge not initialized' }
+
+            const ui = useUiStore()
+
+            let targetCollections = this.collections
+            let targetEdges = this.edges
+
+            if (selectedIds) {
+                const idSet = new Set(selectedIds)
+                targetCollections = this.collections.filter(c => idSet.has(c.id))
+                targetEdges = this.edges.filter(e => idSet.has(e.source) && idSet.has(e.target))
+            }
+
+            const payload = {
+                databases: this.databases,
+                activeDatabaseId: this.activeDatabaseId,
+                collections: targetCollections,
+                edges: targetEdges,
+            }
+
+            try {
+                const response = await apiBridgeInstance.saveSchema(payload)
+
+                // After successful save, refresh from remote to mark new tables as isPersisted
+                await this.fetchRemoteSchema()
+
+                ui.showToast('Project synced to migrations successfully', 'success')
+                return { success: true, response }
+            } catch (error) {
+                ui.showToast('Failed to sync with migrations', 'error')
+                return { success: false, error }
+            }
+        },
+        /**
+         * Save node positions only to the backend with debouncing.
+         */
+        async saveLayout() {
+            if (!apiBridgeInstance) return { success: false, message: 'Bridge not initialized' }
+
+            if (!this._debouncedSaveLayout) {
+                this._debouncedSaveLayout = useDebounceFn(async () => {
+                    const payload = {
+                        collections: this.collections
+                    }
+                    try {
+                        await apiBridgeInstance.saveLayout(payload)
+                    } catch (error) {
+                        console.error('Failed to save layout:', error)
+                    }
+                }, 1000)
+            }
+
+            this._debouncedSaveLayout()
+            return { success: true }
+        },
+        /**
+         * Fetch schema from a live database via the bridge.
+         */
+        async fetchLiveDbSchema(databaseId) {
+            if (!apiBridgeInstance) return { success: false, message: 'Bridge not initialized' }
+
+            const ui = useUiStore()
+            try {
+                const schema = await apiBridgeInstance.fetchLiveDb(databaseId)
+                if (schema) {
+                    this.importProject(schema)
+                    ui.showToast('Database schema imported successfully')
+                    return { success: true }
+                }
+            } catch (error) {
+                ui.showToast('Failed to import database schema', 'error')
+                return { success: false, error }
+            }
         }
     }
 })

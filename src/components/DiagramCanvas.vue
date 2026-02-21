@@ -383,6 +383,11 @@ watch([getSelectedNodes, getSelectedEdges], ([nodes, edges]) => {
 watch(() => store.collections, () => {
   store.pruneInvalidEdges(store.activeDatabaseId)
   syncEdgeStylesByFieldType()
+  
+  // Persist layout changes to backend (debounced)
+  if (store.bridgeMode === 'remote') {
+    store.saveLayout()
+  }
 }, { deep: true })
 
 watch(() => store.edges, () => {
